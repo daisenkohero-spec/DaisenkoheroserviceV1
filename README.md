@@ -1,13 +1,13 @@
 //DHS Code for UI
 
-# 📱 Techniqian App
+#  Techniqian App
 
 แอปพลิเคชันสำหรับจัดการงานบริการช่างล้างแอร์ (Technician Management System)  
 พัฒนาด้วย Flutter สำหรับโปรเจคฝึกงาน เพื่อช่วยให้ช่างสามารถจัดการงาน ตรวจสอบสถานะ และเช็คอินการทำงานได้อย่างมีประสิทธิภาพ
 
 ---
 
-## 🚀 Features
+##  Features
 
 -  **Authentication**  
   Login และจัดเก็บ Token ด้วย SharedPreferences  
@@ -35,7 +35,9 @@
 
 ---
 
-
+## System Flow Diagram
+![System Flow](assets/images/workflow.png)
+---
 ###  Main Workflow
 
 1. ลูกค้าจองบริการ (Booking)  
@@ -69,7 +71,7 @@
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 lib/
 ┣ models/
