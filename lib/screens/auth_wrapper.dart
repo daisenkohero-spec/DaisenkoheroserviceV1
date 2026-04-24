@@ -20,13 +20,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
+Widget build(BuildContext context) {
+  final auth = context.watch<AuthProvider>();
 
-    if (auth.isLoggedIn) {
-      return const NavScreen();
-    } else {
-      return const LoginScreen();
-    }
+  if (auth.user != null) {
+    return const NavScreen();
+  } else {
+    return const LoginScreen();
   }
+}
 }

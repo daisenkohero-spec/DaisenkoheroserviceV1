@@ -1,22 +1,41 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 
 class AuthRepository {
-  Future<UserModel> getProfile() async {
-    await Future.delayed(const Duration(seconds: 1));
-
-    return UserModel(id: "1", name: "Test User", token: "mock_token_123");
-  }
+  final _db = FirebaseFirestore.instance;
 
   Future<UserModel> login({
     required String phone,
     required String password,
   }) async {
-    await Future.delayed(const Duration(seconds: 1));
+    final result = await _db
+        .collection('technicians')
+        .where('phone', isEqualTo: phone)
+        .get();
 
-    if (phone == "0999999999" && password == "1234") {
-      return UserModel(id: "1", name: "Mock User", token: "mock_token_123");
+    print("FOUND: ${result.docs.length}");
+
+    if (result.docs.isNotEmpty) {
+      final doc = result.docs.first;
+      final dbPass = doc['password'];
+
+      print("DB PASS: $dbPass");
+
+      if (dbPass == password) {
+        return UserModel(id: doc.id, name: doc['name'], token: "mock_token");
+      } else {
+        throw Exception("PASSWORD_WRONG");
+      }
     } else {
-      throw Exception("LOGIN_FAILED");
+      throw Exception("USER_NOT_FOUND");
     }
+  }
+
+  Future<UserModel> getProfile(String userId) async {
+    final doc = await _db.collection('technicians').doc(userId).get();
+
+    final data = doc.data()!;
+
+    return UserModel(id: doc.id, name: data['name'], token: "mock_token");
   }
 }

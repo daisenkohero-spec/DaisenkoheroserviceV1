@@ -6,6 +6,7 @@ import '../providers/attendance_provider.dart';
 import '../models/job_model.dart';
 import 'checkin_screen.dart';
 import 'notification_screen.dart';
+import '../screens/login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,10 +16,17 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _isLoaded = false;
+
   static const primaryColor = Color(0xFF1E3A8A);
   static const accentColor = Color(0xFF0EA5E9);
   static const bgColor = Color(0xFFF1F5F9);
+
   String selectedTab = "upcoming";
+
+  // ---------------------------
+  // PRIORITY COLOR
+  // ---------------------------
   Color priorityColor(JobPriority priority) {
     switch (priority) {
       case JobPriority.urgent:
@@ -32,15 +40,32 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // ---------------------------
+  // INIT
+  // ---------------------------
   @override
   void initState() {
     super.initState();
-
-    Future.microtask(() {
-      Provider.of<JobProvider>(context, listen: false).loadJobs("tech001");
-    });
   }
 
+  //  โหลด jobs หลังได้ user
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_isLoaded) {
+      final user = context.read<AuthProvider>().user;
+
+      if (user != null) {
+        context.read<JobProvider>().loadJobs(user.id);
+        _isLoaded = true;
+      }
+    }
+  }
+
+  // ---------------------------
+  // STATUS ICON
+  // ---------------------------
   IconData statusIcon(WeekStatus status) {
     switch (status) {
       case WeekStatus.present:
@@ -57,10 +82,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // ---------------------------
+  // BUILD
+  // ---------------------------
   @override
   Widget build(BuildContext context) {
     final jobProvider = context.watch<JobProvider>();
-
     final attendanceProvider = context.watch<AttendanceProvider>();
 
     final weekData = attendanceProvider.getThisWeek();
@@ -285,7 +312,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
 
                             if (confirm == true) {
-                              context.read<AuthProvider>().logout();
+                              await context.read<AuthProvider>().logout();
+
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginScreen(),
+                                ),
+                                (route) => false,
+                              );
                             }
                           },
                           child: Container(
@@ -777,10 +812,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
 
             ...displayJobs.map((job) {
-             
-
-            final borderColor = jobProvider.getJobBorderColor(job);
-final bgColor = jobProvider.getJobBgColor(job);
+              final borderColor = jobProvider.getJobBorderColor(job);
+              final bgColor = jobProvider.getJobBgColor(job);
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 14),

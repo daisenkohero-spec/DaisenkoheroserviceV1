@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../repositories/auth_repository.dart';
 import '../core/api/api_client.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthRepository _repository = AuthRepository();
@@ -28,19 +29,20 @@ class AuthProvider extends ChangeNotifier {
   Future<void> tryAutoLogin() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
+    final userId = prefs.getString("userId");
 
-    _isLoading = true;
-    notifyListeners();
-
-    if (token == null) return;
+    if (token == null || userId == null) {
+      notifyListeners();
+      return;
+    }
 
     _api.setToken(token);
 
     try {
-      final user = await _repository.getProfile();
+      final user = await _repository.getProfile(userId);
       _currentUser = user;
     } catch (e) {
-      await prefs.remove("token");
+      await prefs.clear();
     }
 
     notifyListeners();
@@ -50,28 +52,38 @@ class AuthProvider extends ChangeNotifier {
   // LOGIN
   // -------------------
 
-  Future<void> login(String phone, String password) async {
+  Future<void> login(String username, String password) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
-    if (phone.isEmpty || password.isEmpty) {
-      _error = "กรุณากรอกข้อมูล";
-      notifyListeners();
-      return;
-    }
-
     try {
-      final user = await _repository.login(phone: phone, password: password);
+      final user = await _repository.login(phone: username, password: password);
 
-      _currentUser = user;
+      if (user != null) {
+        print("LOGIN SUCCESS");
 
-      _api.setToken(user.token);
+        _currentUser = user;
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString("token", user.token);
+        await FirebaseFirestore.instance
+            .collection('technicians')
+            .doc(user.id)
+            .update({
+              'status': 'online',
+              'lastLogin': FieldValue.serverTimestamp(),
+            });
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString("userId", user.id);
+        if (user.token != null) {
+          await prefs.setString("token", user.token!);
+          _api.setToken(user.token!);
+        }
+      } else {
+        _error = "Invalid username or password";
+      }
     } catch (e) {
-      _error = "เข้าสู่ระบบไม่สำเร็จ";
+      print("LOGIN ERROR: $e");
+      _error = "Login failed";
     }
 
     _isLoading = false;
@@ -85,10 +97,25 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
 
-    await prefs.clear();
-    _error = null;
-    _currentUser = null;
+    final userId = _currentUser?.id; 
+
     _api.setToken("");
+
+    _error = null;
+
+    if (userId != null) {
+      await FirebaseFirestore.instance
+          .collection('technicians')
+          .doc(userId)
+          .update({
+            'status': 'offline',
+            'lastLogout': FieldValue.serverTimestamp(),
+          });
+    }
+
+    await prefs.clear();
+
+    _currentUser = null;
 
     notifyListeners();
   }

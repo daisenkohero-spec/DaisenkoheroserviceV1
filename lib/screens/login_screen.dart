@@ -16,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordCtrl = TextEditingController();
 
   bool canLogin = false;
+  bool isPasswordVisible = false;
 
   void _validate() {
     setState(() {
@@ -114,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           controller: passwordCtrl,
                           hint: 'Password',
                           icon: Icons.lock_outline,
-                          obscure: true,
+                          isPassword: true,
                         ),
                         const SizedBox(height: 22),
 
@@ -129,13 +130,21 @@ class _LoginScreenState extends State<LoginScreen> {
                                       passwordCtrl.text,
                                     );
 
-                                    if (auth.error != null) {
+                                    final updatedAuth = context
+                                        .read<AuthProvider>();
+
+                            
+                                    if (updatedAuth.error != null) {
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
-                                        SnackBar(content: Text(auth.error!)),
+                                        SnackBar(
+                                          content: Text(updatedAuth.error!),
+                                        ),
                                       );
-                                    } else {
+                                    }
+                                    
+                                    else {
                                       Navigator.pushReplacement(
                                         context,
                                         MaterialPageRoute(
@@ -189,6 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
     required String hint,
     required IconData icon,
     bool obscure = false,
+    bool isPassword = false,
     TextInputType keyboardType = TextInputType.text,
   }) {
     return Container(
@@ -198,12 +208,24 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       child: TextField(
         controller: controller,
-        obscureText: obscure,
+        obscureText: isPassword ? !isPasswordVisible : obscure,
         keyboardType: keyboardType,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: const TextStyle(color: AppColors.textHint),
           prefixIcon: Icon(icon, color: AppColors.iconSecondary),
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(
+                    isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      isPasswordVisible = !isPasswordVisible;
+                    });
+                  },
+                )
+              : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
