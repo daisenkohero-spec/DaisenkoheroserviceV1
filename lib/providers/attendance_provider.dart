@@ -225,9 +225,11 @@ class AttendanceProvider extends ChangeNotifier {
   AttendanceRecord? get todayRecord => getTodayRecord();
   // ================= OFFICE LOCATION =================
 
-  static const double officeLat = 13.96725; //
-  static const double officeLng = 100.61220;
-static const double allowedRadius = 100; 
+  static const double officeLat = 13.987401;
+  static const double officeLng = 100.604224;
+// TODO: ช่วงทดลองใช้เดือนแรก ตั้งรัศมีกว้างไว้ให้เช็คอินได้จากทุกที่
+// เมื่อใช้งานจริงที่ออฟฟิศแล้ว ให้ปรับกลับเป็น 100 (เมตร)
+static const double allowedRadius = 50000; // 50 km (pilot/testing)
   // ================= WEEK VIEW =================
 
   List<WeekDayData> getThisWeek() {
