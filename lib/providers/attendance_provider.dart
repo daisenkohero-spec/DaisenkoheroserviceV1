@@ -227,9 +227,9 @@ class AttendanceProvider extends ChangeNotifier {
 
   static const double officeLat = 13.987401;
   static const double officeLng = 100.604224;
-// TODO: ช่วงทดลองใช้เดือนแรก ตั้งรัศมีกว้างไว้ให้เช็คอินได้จากทุกที่
-// เมื่อใช้งานจริงที่ออฟฟิศแล้ว ให้ปรับกลับเป็น 100 (เมตร)
-static const double allowedRadius = 50000; // 50 km (pilot/testing)
+// รัศมีอนุญาตเช็คอินรอบออฟฟิศ (เมตร)
+// 300 ม. เผื่อความคลาดเคลื่อนของ GPS บนมือถือช่วงทดลอง — ปรับให้แคบลงได้ภายหลัง
+static const double allowedRadius = 300;
   // ================= WEEK VIEW =================
 
   List<WeekDayData> getThisWeek() {
