@@ -37,6 +37,14 @@ Production-readiness gaps, grouped by priority. Check off as completed.
       consent, especially for location tracking. Add a privacy policy page and a
       location-consent screen.
 
+## Deployment notes (learned the hard way)
+- Flutter web uses an aggressive **service worker cache**. After every
+  `firebase deploy`, existing users keep the old version until the service worker
+  updates (≈ 2nd page load) or they **hard-refresh (Ctrl+Shift+R)**. If a user
+  reports the app "broken" or "won't log in" right after a deploy, have them do
+  **Empty Cache and Hard Reload** first — that resolved the initial
+  `firebase_auth/channel-error` on the first launch.
+
 ## Recommended sequence
 1. Deploy to Hosting (Tier 1) → real URL to share.
 2. Decide Blaze for photos (Tier 1).
