@@ -47,3 +47,6 @@ app.*.map.json
 # Node API server
 /server/node_modules/
 /server/.env
+
+# Firebase deploy cache
+.firebase/
