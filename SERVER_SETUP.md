@@ -42,7 +42,7 @@ flutter pub get
 
 ## 2. Firebase setup
 
-The app uses Firebase project `air-cleaning-test`.
+The app uses Firebase project `daisenkoheroservicev1`.
 
 ### Android (already configured)
 
@@ -51,7 +51,7 @@ The app uses Firebase project `air-cleaning-test`.
 
 ### Web (one-time in Firebase Console)
 
-1. Open [Firebase Console](https://console.firebase.google.com/) → project `air-cleaning-test`
+1. Open [Firebase Console](https://console.firebase.google.com/) → project `daisenkoheroservicev1`
 2. Add a **Web app**
 3. Copy the web `appId`
 4. Update `lib/firebase_options.dart` → `web.appId` with the real value
@@ -185,7 +185,7 @@ Output: `build/app/outputs/flutter-apk/app-release.apk`
 |---------|-----------|------------|
 | Web app | http://localhost:8080 | Your hosting domain |
 | API | http://localhost:3000 | Your API domain |
-| Firebase | `air-cleaning-test` | Same project |
+| Firebase | `daisenkoheroservicev1` | Same project |
 
 The Flutter app uses `http://localhost:3000/api` in debug mode and `https://api.daisenkohero.com/api` in release builds (`lib/core/api/api_client.dart`).
 

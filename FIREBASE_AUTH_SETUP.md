@@ -3,7 +3,7 @@
 The app now authenticates technicians through **Firebase Authentication**
 (Email/Password) instead of comparing plaintext passwords in Firestore. This
 is what makes the Firestore/Storage security rules able to identify the user
-(`request.auth`). Follow these steps once, in the `air-cleaning-test` project.
+(`request.auth`). Follow these steps once, in the `daisenkoheroservicev1` project.
 
 ## Why this changed
 

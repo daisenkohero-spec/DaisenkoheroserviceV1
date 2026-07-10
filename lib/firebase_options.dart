@@ -31,47 +31,48 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAu5ZnM0JpsF-HoaQHFHriHZkTp_Gv1lHY',
-    appId: '1:408424583515:android:d8cf3e093270ff7e390a7e',
-    messagingSenderId: '408424583515',
-    projectId: 'air-cleaning-test',
-    storageBucket: 'air-cleaning-test.firebasestorage.app',
+    apiKey: 'AIzaSyC05cIeLYivRFVtkl9OvclUDTXW4qUJjfg',
+    appId: '1:519440484589:android:403384608f2306f5a724e4',
+    messagingSenderId: '519440484589',
+    projectId: 'daisenkoheroservicev1',
+    storageBucket: 'daisenkoheroservicev1.firebasestorage.app',
   );
-
   // Register a Web app in Firebase Console to get a dedicated web appId.
+
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAu5ZnM0JpsF-HoaQHFHriHZkTp_Gv1lHY',
-    appId: '1:408424583515:web:daisenko-hero-service',
-    messagingSenderId: '408424583515',
-    projectId: 'air-cleaning-test',
-    authDomain: 'air-cleaning-test.firebaseapp.com',
-    storageBucket: 'air-cleaning-test.firebasestorage.app',
+    apiKey: 'AIzaSyCP9L2LwA3773Q81Gp2wmXc-qEHBHJkGqI',
+    appId: '1:519440484589:web:f8de880f85f383a1a724e4',
+    messagingSenderId: '519440484589',
+    projectId: 'daisenkoheroservicev1',
+    authDomain: 'daisenkoheroservicev1.firebaseapp.com',
+    storageBucket: 'daisenkoheroservicev1.firebasestorage.app',
+    measurementId: 'G-EKQNS3XSEM',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAu5ZnM0JpsF-HoaQHFHriHZkTp_Gv1lHY',
-    appId: '1:408424583515:ios:daisenko-hero-service',
-    messagingSenderId: '408424583515',
-    projectId: 'air-cleaning-test',
-    storageBucket: 'air-cleaning-test.firebasestorage.app',
+    apiKey: 'AIzaSyByRT4Fu88pNa4msfhnLrX9QH2QRzimXB0',
+    appId: '1:519440484589:ios:9f375fc56d9af962a724e4',
+    messagingSenderId: '519440484589',
+    projectId: 'daisenkoheroservicev1',
+    storageBucket: 'daisenkoheroservicev1.firebasestorage.app',
     iosBundleId: 'com.example.projectTechniqian',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyAu5ZnM0JpsF-HoaQHFHriHZkTp_Gv1lHY',
-    appId: '1:408424583515:ios:daisenko-hero-service',
-    messagingSenderId: '408424583515',
-    projectId: 'air-cleaning-test',
-    storageBucket: 'air-cleaning-test.firebasestorage.app',
+    apiKey: 'AIzaSyByRT4Fu88pNa4msfhnLrX9QH2QRzimXB0',
+    appId: '1:519440484589:ios:9f375fc56d9af962a724e4',
+    messagingSenderId: '519440484589',
+    projectId: 'daisenkoheroservicev1',
+    storageBucket: 'daisenkoheroservicev1.firebasestorage.app',
     iosBundleId: 'com.example.projectTechniqian',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyAu5ZnM0JpsF-HoaQHFHriHZkTp_Gv1lHY',
-    appId: '1:408424583515:web:daisenko-hero-service',
-    messagingSenderId: '408424583515',
-    projectId: 'air-cleaning-test',
-    authDomain: 'air-cleaning-test.firebaseapp.com',
-    storageBucket: 'air-cleaning-test.firebasestorage.app',
+    apiKey: 'AIzaSyCP9L2LwA3773Q81Gp2wmXc-qEHBHJkGqI',
+    appId: '1:519440484589:web:fee64a2288313e76a724e4',
+    messagingSenderId: '519440484589',
+    projectId: 'daisenkoheroservicev1',
+    authDomain: 'daisenkoheroservicev1.firebaseapp.com',
+    storageBucket: 'daisenkoheroservicev1.firebasestorage.app',
+    measurementId: 'G-D679QV9SXB',
   );
 }
