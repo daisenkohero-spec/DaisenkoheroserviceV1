@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/job_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/notification_service.dart';
+import '../services/activity_service.dart';
 import 'dart:async';
 
 class JobProvider extends ChangeNotifier {
@@ -272,6 +273,14 @@ class JobProvider extends ChangeNotifier {
         "isNotificationRead": true,
         "startedWorkingAt": FieldValue.serverTimestamp(),
       });
+
+      // บันทึกเหตุการณ์เริ่มงานลง activity_events
+      await ActivityService.log(
+        type: ActivityService.jobStart,
+        technicianId: job.technicianId,
+        jobId: job.id,
+        meta: {"service": job.service},
+      );
     } catch (e) {
       debugPrint("startWorking error: $e");
       rethrow;
@@ -300,6 +309,19 @@ class JobProvider extends ChangeNotifier {
         "notificationType": "jobUpdate",
         "isNotificationRead": false,
       });
+
+      // บันทึกเหตุการณ์จบงานลง activity_events
+      final start = job.startedWorkingAt;
+      await ActivityService.log(
+        type: ActivityService.jobFinish,
+        technicianId: job.technicianId,
+        jobId: job.id,
+        meta: {
+          "service": job.service,
+          if (start != null)
+            "durationMin": job.finishedAt!.difference(start).inMinutes.abs(),
+        },
+      );
     } catch (e) {
       print("completeJob error: $e");
     }

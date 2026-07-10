@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../providers/job_provider.dart';
+import '../services/activity_service.dart';
 import '../models/job_model.dart';
 import 'nav_screen.dart';
 
@@ -50,6 +52,26 @@ class _FinishJobScreenState extends State<FinishJobScreen> {
     });
   }
 
+  /// ================= UPLOAD =================
+  /// อัปโหลดรูปด้วย bytes (รองรับทั้ง web และ mobile) แล้วคืน download URL
+  Future<String> _uploadPhoto(XFile image) async {
+    final bytes = await image.readAsBytes();
+
+    final rawExt = image.name.contains('.')
+        ? image.name.split('.').last.toLowerCase()
+        : 'jpg';
+    final contentType = (rawExt == 'jpg' || rawExt == 'jpeg')
+        ? 'image/jpeg'
+        : 'image/$rawExt';
+
+    final ref = FirebaseStorage.instance.ref(
+      'job_photos/${widget.job.id}/${DateTime.now().millisecondsSinceEpoch}.$rawExt',
+    );
+
+    await ref.putData(bytes, SettableMetadata(contentType: contentType));
+    return ref.getDownloadURL();
+  }
+
   /// ================= SUBMIT =================
   Future<void> _submitFinishJob() async {
     if (_image == null) {
@@ -67,9 +89,41 @@ class _FinishJobScreenState extends State<FinishJobScreen> {
 
     widget.job.finishedAt = DateTime.now();
     widget.job.status = JobStatus.completed;
-    widget.job.imagePath = _image!.path;
+
+    // อัปโหลดรูปขึ้น Firebase Storage แล้วเก็บ URL (ไม่ใช่ path ในเครื่อง)
+    String? photoUrl;
+    try {
+      photoUrl = await _uploadPhoto(_image!);
+      widget.job.imagePath = photoUrl;
+    } catch (e) {
+      // อัปโหลดไม่สำเร็จ: ยังจบงานได้ แต่เก็บ path ในเครื่องไว้ชั่วคราว
+      widget.job.imagePath = _image!.path;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("อัปโหลดรูปไม่สำเร็จ บันทึกงานแบบไม่มีรูป: $e")),
+        );
+      }
+    }
 
     await jobProvider.updateJob(widget.job);
+
+    // บันทึกเหตุการณ์จบงาน (พร้อมรูป) ลง activity_events
+    final start = widget.job.startedWorkingAt;
+    await ActivityService.log(
+      type: ActivityService.jobFinish,
+      technicianId: widget.job.technicianId,
+      jobId: widget.job.id,
+      meta: {
+        "service": widget.job.service,
+        "hasPhoto": photoUrl != null,
+        if (photoUrl != null) "photoUrl": photoUrl,
+        if (start != null)
+          "durationMin":
+              widget.job.finishedAt!.difference(start).inMinutes.abs(),
+      },
+    );
+
+    if (!mounted) return;
     //  รีเฟรชหน้าเดิมแทน push ใหม่
     Navigator.pop(context);
     Navigator.pushAndRemoveUntil(

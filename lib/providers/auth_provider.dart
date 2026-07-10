@@ -3,7 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../repositories/auth_repository.dart';
 import '../core/api/api_client.dart';
+import '../services/activity_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthRepository _repository = AuthRepository();
@@ -65,12 +67,21 @@ class AuthProvider extends ChangeNotifier {
 
         _currentUser = user;
 
+        // ผูก FCM token กับช่างจริงที่ล็อกอิน (แทนการ hardcode ตอนเริ่มแอป)
+        String? fcmToken;
+        try {
+          fcmToken = await FirebaseMessaging.instance.getToken();
+        } catch (e) {
+          debugPrint("getToken error: $e");
+        }
+
         await FirebaseFirestore.instance
             .collection('technicians')
             .doc(user.id)
             .update({
               'status': 'online',
               'lastLogin': FieldValue.serverTimestamp(),
+              if (fcmToken != null) 'fcmToken': fcmToken,
             });
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString("userId", user.id);
@@ -78,6 +89,12 @@ class AuthProvider extends ChangeNotifier {
           await prefs.setString("token", user.token!);
           _api.setToken(user.token!);
         }
+
+        // บันทึกเหตุการณ์เข้าสู่ระบบลง activity_events
+        await ActivityService.log(
+          type: ActivityService.login,
+          technicianId: user.id,
+        );
       } else {
         _error = "Invalid username or password";
       }
@@ -110,7 +127,15 @@ class AuthProvider extends ChangeNotifier {
           .update({
             'status': 'offline',
             'lastLogout': FieldValue.serverTimestamp(),
+            // ลบ FCM token ออกเพื่อไม่ให้แจ้งเตือนไปหาช่างที่ล็อกเอาต์แล้ว
+            'fcmToken': FieldValue.delete(),
           });
+
+      // บันทึกเหตุการณ์ออกจากระบบลง activity_events
+      await ActivityService.log(
+        type: ActivityService.logout,
+        technicianId: userId,
+      );
     }
 
     await prefs.clear();

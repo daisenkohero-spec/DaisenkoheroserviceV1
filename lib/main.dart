@@ -8,7 +8,6 @@ import 'screens/auth_wrapper.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'services/notification_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -51,18 +50,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future<void> setupFCM() async {
   FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-  // ขอ permission
+  // ขอ permission (ตอนเริ่มแอปยังไม่รู้ว่าใครล็อกอิน
+  // จึงบันทึก FCM token ให้ช่างจริงตอน login แทน — ดู AuthProvider.login)
   await messaging.requestPermission(alert: true, badge: true, sound: true);
-
-  // เอา token
-  String? token = await messaging.getToken();
-
-  //  save ลง Firestore
-  if (token != null) {
-    await FirebaseFirestore.instance.collection("users").doc("tech001").set({
-      "fcmToken": token,
-    }, SetOptions(merge: true));
-  }
 }
 
 class MyApp extends StatelessWidget {

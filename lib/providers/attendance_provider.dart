@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import '../services/activity_service.dart';
 
 /// ================= ENUM =================
 
@@ -49,6 +50,10 @@ class AttendanceProvider extends ChangeNotifier {
   Map<DateTime, AttendanceRecord> get records => _records;
   double? _lastDistance;
   double? get lastDistance => _lastDistance;
+
+  // ตำแหน่งจริงล่าสุด (เก็บไว้เพื่อบันทึกลง activity_events)
+  double? _lastLat;
+  double? _lastLng;
 
   // ================= STATUS COLORS  =================
 
@@ -108,7 +113,11 @@ class AttendanceProvider extends ChangeNotifier {
   }
 
   // ================= CHECK-IN =================
-  void checkIn({required CheckinType type, String? reason}) {
+  Future<void> checkIn({
+    required CheckinType type,
+    String? reason,
+    String? technicianId,
+  }) async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
@@ -131,14 +140,32 @@ class AttendanceProvider extends ChangeNotifier {
       }
     }
 
-    _records[today] = AttendanceRecord(
+    final record = AttendanceRecord(
       date: today,
       status: status,
       checkinTime: TimeOfDay.now(),
       reason: reason,
     );
 
+    _records[today] = record;
     notifyListeners();
+
+    // บันทึกลง activity_events แบบถาวร (append-only) เพื่อเก็บข้อมูลการเข้างาน
+    final isLeave = type == CheckinType.leave;
+    await ActivityService.log(
+      type: ActivityService.attendanceCheckin,
+      technicianId: technicianId,
+      // ตำแหน่งจะมีเฉพาะการเข้างานจริง (normal/late) ไม่ใช่การลา
+      latitude: isLeave ? null : _lastLat,
+      longitude: isLeave ? null : _lastLng,
+      meta: {
+        'status': status.name, // present | late | leave
+        'checkinType': type.name, // normal | late | leave
+        'checkinTime': record.toJson()['checkin_time'],
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+        if (!isLeave && _lastDistance != null) 'distanceM': _lastDistance,
+      },
+    );
   }
   // ================= LOCATION CHECK =================
 
@@ -169,6 +196,10 @@ class AttendanceProvider extends ChangeNotifier {
 
     debugPrint("CURRENT LAT: ${position.latitude}");
     debugPrint("CURRENT LNG: ${position.longitude}");
+
+    _lastLat = position.latitude;
+    _lastLng = position.longitude;
+
     double distance = Geolocator.distanceBetween(
       position.latitude,
       position.longitude,
