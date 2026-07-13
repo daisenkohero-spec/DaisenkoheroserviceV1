@@ -1,14 +1,15 @@
 // Daily job creator for the pilot (interim dispatcher).
 //
 // Usage:
-//   node add-job.js "<customer>" "<service>" <start HH:MM> <end HH:MM> [place] [phone] [technicianId]
+//   node add-job.js <techPhone> "<customer>" "<service>" <start HH:MM> <end HH:MM> [place] [customerPhone]
 //
 // Examples:
-//   node add-job.js "คุณสมชาย" "ล้างแอร์" 09:00 11:00
-//   node add-job.js "คุณสมหญิง" "ล้างแอร์ 2 เครื่อง" 13:00 15:00 "คอนโด ABC ห้อง 502" 0898887777
+//   node add-job.js 0811112222 "คุณสมชาย" "ล้างแอร์" 09:00 11:00
+//   node add-job.js 0811112222 "คุณสมหญิง" "ล้างแอร์ 2 เครื่อง" 13:00 15:00 "คอนโด ABC ห้อง 502" 0898887777
 //
-// Creates a job for TODAY, assigned to the given technician (default = test tech),
-// so it appears under "Today's Jobs" in the app.
+// Assigns the job to the technician with that phone number (must already be
+// onboarded via add-technician.js). Creates the job for TODAY so it appears under
+// "Today's Jobs" in that technician's app.
 
 const admin = require("firebase-admin");
 const serviceAccount = require("./serviceAccountKey.json");
@@ -16,8 +17,20 @@ const serviceAccount = require("./serviceAccountKey.json");
 admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 const db = admin.firestore();
 
-// Default technician (the pilot test tech). Override with the 7th argument.
-const DEFAULT_TECHNICIAN_ID = "pT7q587VHekQgDzS02MP";
+async function technicianIdForPhone(phone) {
+  const snap = await db
+    .collection("technicians")
+    .where("phone", "==", String(phone).trim())
+    .limit(1)
+    .get();
+  if (snap.empty) {
+    console.error(
+      `No technician with phone ${phone}. Onboard them first: node add-technician.js "<name>" ${phone} <password>`
+    );
+    process.exit(1);
+  }
+  return snap.docs[0].id;
+}
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -34,16 +47,17 @@ function parseHHMM(label, value) {
 }
 
 async function main() {
-  const [customer, service, startStr, endStr, place, phone, techId] =
+  const [techPhone, customer, service, startStr, endStr, place, phone] =
     process.argv.slice(2);
 
-  if (!customer || !service || !startStr || !endStr) {
+  if (!techPhone || !customer || !service || !startStr || !endStr) {
     console.error(
-      'Usage: node add-job.js "<customer>" "<service>" <start HH:MM> <end HH:MM> [place] [phone] [technicianId]'
+      'Usage: node add-job.js <techPhone> "<customer>" "<service>" <start HH:MM> <end HH:MM> [place] [customerPhone]'
     );
     process.exit(1);
   }
 
+  const technicianId = await technicianIdForPhone(techPhone);
   const start = parseHHMM("start", startStr);
   const end = parseHHMM("end", endStr);
 
@@ -57,7 +71,7 @@ async function main() {
   const dateStr = `${y}-${String(mo + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
   const job = {
-    technicianId: techId || DEFAULT_TECHNICIAN_ID,
+    technicianId,
     customer,
     phone: phone || "",
     service,
