@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/auth_provider.dart';
 import 'assign_job_screen.dart';
+import 'reporting_screen.dart';
 
 /// Admin dispatcher home — today's job board across the whole team.
 class DispatcherScreen extends StatelessWidget {
@@ -34,6 +35,14 @@ class DispatcherScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: "รายงานสรุป",
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ReportingScreen()),
+            ),
+          ),
           IconButton(
             tooltip: "ออกจากระบบ",
             icon: const Icon(Icons.logout),
