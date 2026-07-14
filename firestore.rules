@@ -1,9 +1,12 @@
 rules_version = '2';
 
-// Security rules for the Daisenko Hero Service technician app.
-// Auth model: each technician signs in with Firebase Auth (Email/Password,
-// email = "<phone>@daisenkohero.local"). The technician's Firestore doc is
-// linked to their Auth account via the `authUid` field.
+// Security rules for Daisenko Hero Service.
+//
+// Two roles:
+//  - Technician: signs in with Firebase Auth (email = "<phone>@daisenkohero.local").
+//    Scoped to their own technician doc, jobs, and events.
+//  - Admin (dispatcher): has a doc at admins/{their-auth-uid}. Can manage jobs and
+//    read all technicians/jobs/events for the dispatcher + reporting.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -11,47 +14,59 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // True if the signed-in user owns the technician doc `techId`
-    // (i.e. that doc's authUid matches their Firebase Auth uid).
+    // True if the signed-in user is an admin (has an admins/{uid} doc).
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // True if the signed-in user owns the technician doc `techId`.
     function ownsTechnician(techId) {
       return isSignedIn()
         && get(/databases/$(database)/documents/technicians/$(techId)).data.authUid
              == request.auth.uid;
     }
 
+    // Admin registry. Created/removed only via the Admin SDK (add-admin.js),
+    // never from a client. A user may read their own admin doc (to learn their
+    // role at login); admins may read the whole registry.
+    match /admins/{uid} {
+      allow read: if isSignedIn() && (uid == request.auth.uid || isAdmin());
+      allow create, update, delete: if false;
+    }
+
     match /technicians/{techId} {
-      // Any signed-in technician may read technician profiles (needed for
-      // job/customer context). Tighten to `ownsTechnician(techId)` if you
-      // want each tech to see only their own profile.
+      // Technicians and admins may read technician profiles.
       allow read: if isSignedIn();
 
-      // A technician may update only their own doc. The second clause lets a
-      // freshly-authenticated user claim an as-yet-unlinked doc by setting
-      // authUid to their own uid (first-login linking). Once linked it's fixed.
-      allow update: if isSignedIn() && (
+      // A technician may update only their own doc (with first-login authUid
+      // claim), OR an admin may update any technician.
+      allow update: if isAdmin() || (isSignedIn() && (
         resource.data.authUid == request.auth.uid ||
         (!("authUid" in resource.data)
           && request.resource.data.authUid == request.auth.uid)
-      );
+      ));
 
-      // Creating/deleting technicians is an admin action (console / backend).
-      allow create, delete: if false;
+      // Only admins create/delete technicians (also done via Admin SDK script).
+      allow create, delete: if isAdmin();
     }
 
     match /jobs/{jobId} {
-      // A technician may read and update only their own jobs.
-      allow read: if ownsTechnician(resource.data.technicianId);
-      allow update: if ownsTechnician(resource.data.technicianId)
-        && ownsTechnician(request.resource.data.technicianId);
-      // Jobs are created/removed by admin (console / backend), not the app.
-      allow create, delete: if false;
+      // Technicians read/update only their own jobs; admins see and manage all.
+      allow read: if isAdmin() || ownsTechnician(resource.data.technicianId);
+      allow update: if isAdmin() || (
+        ownsTechnician(resource.data.technicianId)
+        && ownsTechnician(request.resource.data.technicianId)
+      );
+      // Admins create and delete jobs (the dispatcher).
+      allow create, delete: if isAdmin();
     }
 
     match /activity_events/{eventId} {
-      // Append-only usage log: a technician may only add events about
-      // themselves, and events can never be edited or deleted.
-      allow create: if ownsTechnician(request.resource.data.technicianId);
-      allow read: if isSignedIn();
+      // Append-only usage log: technicians add events about themselves; admins
+      // may also add. Reads: own events, or admins (for reporting). Never edited.
+      allow create: if isAdmin() || ownsTechnician(request.resource.data.technicianId);
+      allow read: if isAdmin() || ownsTechnician(resource.data.technicianId);
       allow update, delete: if false;
     }
 
