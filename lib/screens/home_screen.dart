@@ -421,7 +421,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             backgroundColor: primaryColor,
                           ),
                           child: const Text(
-                            "Check‑in",
+                            "เช็คอิน",
                             style: TextStyle(color: Colors.white),
                           ),
                         ),
