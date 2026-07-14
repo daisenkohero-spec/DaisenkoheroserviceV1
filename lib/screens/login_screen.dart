@@ -3,6 +3,7 @@ import '../core/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'nav_screen.dart';
+import 'dispatcher/dispatcher_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -106,9 +107,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         _inputField(
                           controller: usernameCtrl,
-                          hint: 'Phone number',
-                          icon: Icons.phone_outlined,
-                          keyboardType: TextInputType.phone,
+                          hint: 'เบอร์โทร (ช่าง) หรือ อีเมล (ผู้ดูแล)',
+                          icon: Icons.person_outline,
+                          keyboardType: TextInputType.text,
                         ),
                         const SizedBox(height: 14),
                         _inputField(
@@ -145,10 +146,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                     }
                                     
                                     else {
+                                      // ผู้ดูแล -> Dispatcher, ช่าง -> แอปช่าง
                                       Navigator.pushReplacement(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => const NavScreen(),
+                                          builder: (_) => updatedAuth.isAdmin
+                                              ? const DispatcherScreen()
+                                              : const NavScreen(),
                                         ),
                                       );
                                     }
