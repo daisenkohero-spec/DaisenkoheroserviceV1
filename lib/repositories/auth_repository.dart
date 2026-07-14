@@ -81,4 +81,41 @@ class AuthRepository {
       token: _auth.currentUser?.uid ?? '',
     );
   }
+
+  /// Admin/dispatcher login with a real email. Verifies the user has an
+  /// admins/{uid} doc; otherwise it's not an admin account.
+  Future<UserModel> loginAdmin({
+    required String email,
+    required String password,
+  }) async {
+    final UserCredential cred;
+    try {
+      cred = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        throw Exception('PASSWORD_WRONG');
+      }
+      if (e.code == 'user-not-found') {
+        throw Exception('USER_NOT_FOUND');
+      }
+      rethrow;
+    }
+
+    final uid = cred.user!.uid;
+    final adminDoc = await _db.collection('admins').doc(uid).get();
+    if (!adminDoc.exists) {
+      await _auth.signOut();
+      throw Exception('NOT_ADMIN');
+    }
+    return UserModel(id: uid, name: adminDoc.data()?['name'] ?? 'Admin', token: uid);
+  }
+
+  /// Returns the admin's display name if this uid is an admin, else null.
+  Future<String?> adminNameForUid(String uid) async {
+    final doc = await _db.collection('admins').doc(uid).get();
+    return doc.exists ? (doc.data()?['name'] ?? 'Admin') as String : null;
+  }
 }

@@ -14,6 +14,7 @@ class AuthProvider extends ChangeNotifier {
 
   UserModel? _currentUser;
   bool _isLoading = false;
+  bool _isAdmin = false;
   String? _error;
 
   // -------------------
@@ -22,6 +23,7 @@ class AuthProvider extends ChangeNotifier {
 
   UserModel? get user => _currentUser;
   bool get isLoggedIn => _currentUser != null;
+  bool get isAdmin => _isAdmin;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -42,10 +44,20 @@ class AuthProvider extends ChangeNotifier {
     }
 
     _api.setToken(firebaseUser.uid);
+    final role = prefs.getString("role");
 
     try {
-      final user = await _repository.getProfile(userId);
-      _currentUser = user;
+      if (role == "admin") {
+        final name = await _repository.adminNameForUid(firebaseUser.uid);
+        if (name == null) throw Exception("NOT_ADMIN");
+        _currentUser =
+            UserModel(id: firebaseUser.uid, name: name, token: firebaseUser.uid);
+        _isAdmin = true;
+      } else {
+        final user = await _repository.getProfile(userId);
+        _currentUser = user;
+        _isAdmin = false;
+      }
     } catch (e) {
       await prefs.clear();
     }
@@ -63,40 +75,62 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final user = await _repository.login(phone: username, password: password);
-
-      _currentUser = user;
-
-      // ผูก FCM token กับช่างจริงที่ล็อกอิน (แทนการ hardcode ตอนเริ่มแอป)
-      String? fcmToken;
-      try {
-        fcmToken = await FirebaseMessaging.instance.getToken();
-      } catch (e) {
-        debugPrint("getToken error: $e");
-      }
-
-      await FirebaseFirestore.instance
-          .collection('technicians')
-          .doc(user.id)
-          .update({
-            'status': 'online',
-            'lastLogin': FieldValue.serverTimestamp(),
-            if (fcmToken != null) 'fcmToken': fcmToken,
-          });
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString("userId", user.id);
-      _api.setToken(user.token);
+      // ถ้าใส่อีเมล = ผู้ดูแล (admin); ถ้าใส่เบอร์โทร = ช่าง (technician)
+      final isEmail = username.contains('@');
 
-      // บันทึกเหตุการณ์เข้าสู่ระบบลง activity_events
-      await ActivityService.log(
-        type: ActivityService.login,
-        technicianId: user.id,
-      );
+      if (isEmail) {
+        final user =
+            await _repository.loginAdmin(email: username, password: password);
+        _currentUser = user;
+        _isAdmin = true;
+        _api.setToken(user.token);
+        await prefs.setString("userId", user.id);
+        await prefs.setString("role", "admin");
+
+        await ActivityService.log(
+          type: ActivityService.login,
+          technicianId: user.id,
+          meta: {"role": "admin"},
+        );
+      } else {
+        final user =
+            await _repository.login(phone: username, password: password);
+        _currentUser = user;
+        _isAdmin = false;
+
+        // ผูก FCM token กับช่างจริงที่ล็อกอิน
+        String? fcmToken;
+        try {
+          fcmToken = await FirebaseMessaging.instance.getToken();
+        } catch (e) {
+          debugPrint("getToken error: $e");
+        }
+
+        await FirebaseFirestore.instance
+            .collection('technicians')
+            .doc(user.id)
+            .update({
+              'status': 'online',
+              'lastLogin': FieldValue.serverTimestamp(),
+              if (fcmToken != null) 'fcmToken': fcmToken,
+            });
+        await prefs.setString("userId", user.id);
+        await prefs.setString("role", "tech");
+        _api.setToken(user.token);
+
+        await ActivityService.log(
+          type: ActivityService.login,
+          technicianId: user.id,
+        );
+      }
     } catch (e) {
       debugPrint("LOGIN ERROR: $e");
       final msg = e.toString();
       if (msg.contains("PASSWORD_WRONG")) {
         _error = "รหัสผ่านไม่ถูกต้อง";
+      } else if (msg.contains("NOT_ADMIN")) {
+        _error = "บัญชีนี้ไม่มีสิทธิ์ผู้ดูแล";
       } else if (msg.contains("USER_NOT_FOUND")) {
         _error = "ไม่พบผู้ใช้งานนี้";
       } else {
@@ -121,7 +155,7 @@ class AuthProvider extends ChangeNotifier {
 
     _error = null;
 
-    if (userId != null) {
+    if (userId != null && !_isAdmin) {
       await FirebaseFirestore.instance
           .collection('technicians')
           .doc(userId)
@@ -132,10 +166,15 @@ class AuthProvider extends ChangeNotifier {
             'fcmToken': FieldValue.delete(),
           });
 
-      // บันทึกเหตุการณ์ออกจากระบบลง activity_events
       await ActivityService.log(
         type: ActivityService.logout,
         technicianId: userId,
+      );
+    } else if (userId != null && _isAdmin) {
+      await ActivityService.log(
+        type: ActivityService.logout,
+        technicianId: userId,
+        meta: {"role": "admin"},
       );
     }
 
@@ -145,6 +184,7 @@ class AuthProvider extends ChangeNotifier {
     await prefs.clear();
 
     _currentUser = null;
+    _isAdmin = false;
 
     notifyListeners();
   }
