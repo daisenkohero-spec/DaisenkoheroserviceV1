@@ -43,3 +43,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Node API server
+/server/node_modules/
+/server/.env
+
+# Firebase deploy cache
+.firebase/
+serviceAccountKey.json
+*firebase-adminsdk*.json
+scripts/node_modules/
+scripts/package-lock.json

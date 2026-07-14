@@ -1,0 +1,63 @@
+rules_version = '2';
+
+// Security rules for the Daisenko Hero Service technician app.
+// Auth model: each technician signs in with Firebase Auth (Email/Password,
+// email = "<phone>@daisenkohero.local"). The technician's Firestore doc is
+// linked to their Auth account via the `authUid` field.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // True if the signed-in user owns the technician doc `techId`
+    // (i.e. that doc's authUid matches their Firebase Auth uid).
+    function ownsTechnician(techId) {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/technicians/$(techId)).data.authUid
+             == request.auth.uid;
+    }
+
+    match /technicians/{techId} {
+      // Any signed-in technician may read technician profiles (needed for
+      // job/customer context). Tighten to `ownsTechnician(techId)` if you
+      // want each tech to see only their own profile.
+      allow read: if isSignedIn();
+
+      // A technician may update only their own doc. The second clause lets a
+      // freshly-authenticated user claim an as-yet-unlinked doc by setting
+      // authUid to their own uid (first-login linking). Once linked it's fixed.
+      allow update: if isSignedIn() && (
+        resource.data.authUid == request.auth.uid ||
+        (!("authUid" in resource.data)
+          && request.resource.data.authUid == request.auth.uid)
+      );
+
+      // Creating/deleting technicians is an admin action (console / backend).
+      allow create, delete: if false;
+    }
+
+    match /jobs/{jobId} {
+      // A technician may read and update only their own jobs.
+      allow read: if ownsTechnician(resource.data.technicianId);
+      allow update: if ownsTechnician(resource.data.technicianId)
+        && ownsTechnician(request.resource.data.technicianId);
+      // Jobs are created/removed by admin (console / backend), not the app.
+      allow create, delete: if false;
+    }
+
+    match /activity_events/{eventId} {
+      // Append-only usage log: a technician may only add events about
+      // themselves, and events can never be edited or deleted.
+      allow create: if ownsTechnician(request.resource.data.technicianId);
+      allow read: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // Legacy/unused collection — deny by default.
+    match /users/{docId} {
+      allow read, write: if false;
+    }
+  }
+}

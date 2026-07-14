@@ -136,7 +136,7 @@ class _MapScreenState extends State<MapScreen> {
           .doc(widget.job.id)
           .update({
             "status": status,
-            "assignedTo": "tech_001", // หรือใช้ id ของช่างจริง
+            "assignedTo": widget.job.technicianId,
             "updatedAt": FieldValue.serverTimestamp(),
           });
     } catch (e) {
