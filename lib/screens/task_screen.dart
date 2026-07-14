@@ -83,7 +83,7 @@ class _TaskScreenState extends State<TaskScreen> {
               ),
               const Spacer(),
               const Text(
-                "Task",
+                "งาน",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,
@@ -293,7 +293,7 @@ class _TaskScreenState extends State<TaskScreen> {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: const Text(
-                                "OVERDUE",
+                                "เลยกำหนด",
                                 style: TextStyle(
                                   fontSize: 10,
                                   color: Colors.red,
@@ -469,7 +469,7 @@ class _TaskScreenState extends State<TaskScreen> {
                           ),
                           icon: Icon(Icons.call, size: 18, color: accentColor),
                           label: Text(
-                            'Call',
+                            'โทร',
                             style: TextStyle(color: accentColor),
                           ),
                           onPressed: finished ? null : () => _call(job.phone),
@@ -493,7 +493,7 @@ class _TaskScreenState extends State<TaskScreen> {
                             color: Colors.white,
                           ),
                           label: Text(
-                            finished ? 'Done' : 'Open Map',
+                            finished ? 'เสร็จแล้ว' : 'เปิดแผนที่',
                             style: const TextStyle(color: Colors.white),
                           ),
                           onPressed: finished

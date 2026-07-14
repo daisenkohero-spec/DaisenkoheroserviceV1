@@ -379,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                "Check attendance วันนี้",
+                                "เช็คอินเข้างานวันนี้",
                                 style: TextStyle(fontWeight: FontWeight.w600),
                               ),
                               if (todayRecord != null)
@@ -439,7 +439,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    "This week status",
+                    "สถานะสัปดาห์นี้",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: primaryColor,
@@ -471,7 +471,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: _miniCard(
                       Icons.check_circle,
                       "${attendancePercent()}%",
-                      "Attendance",
+                      "การเข้างาน",
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -479,7 +479,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: _miniCard(
                       Icons.assignment,
                       jobProvider.allActiveJobs.length.toString(),
-                      "Assigned Jobs",
+                      "งานที่ได้รับ",
                     ),
                   ),
                 ],
@@ -578,7 +578,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Icon(Icons.upcoming, color: Colors.white),
                 const SizedBox(width: 8),
                 const Text(
-                  "Next Job",
+                  "งานถัดไป",
                   style: TextStyle(
                     color: Colors.white70,
                     fontWeight: FontWeight.w500,
@@ -689,7 +689,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               children: [
                 const Text(
-                  "Today's Jobs",
+                  "งานวันนี้",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -709,7 +709,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    "${todayJobs.length} Requests",
+                    "${todayJobs.length} รายการ",
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -730,12 +730,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              "$completedToday / ${todayJobs.length} jobs completed",
+              "$completedToday / ${todayJobs.length} งานเสร็จแล้ว",
               style: const TextStyle(fontSize: 12),
             ),
 
             Text(
-              "${(progress * 100).toInt()}% Completed",
+              "เสร็จแล้ว ${(progress * 100).toInt()}%",
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
 
@@ -747,12 +747,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   Icon(Icons.event_available, size: 40, color: Colors.grey),
                   SizedBox(height: 8),
                   Text(
-                    "No jobs today",
+                    "วันนี้ไม่มีงาน",
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   SizedBox(height: 4),
                   Text(
-                    "Enjoy your free day ",
+                    "พักผ่อนได้เต็มที่ ",
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
@@ -765,7 +765,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Expanded(
                   child: _statusBox(
                     icon: Icons.schedule,
-                    label: "Upcoming",
+                    label: "กำลังจะถึง",
                     count: upcomingJobs.length,
                     color: accentColor,
                     isSelected: selectedTab == "upcoming",
@@ -780,7 +780,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Expanded(
                   child: _statusBox(
                     icon: Icons.build_circle,
-                    label: "Ongoing",
+                    label: "กำลังทำ",
                     count: ongoingJobs.length,
                     color: primaryColor,
                     isSelected: selectedTab == "ongoing",
@@ -795,7 +795,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Expanded(
                   child: _statusBox(
                     icon: Icons.warning_amber,
-                    label: "Overdue",
+                    label: "เลยกำหนด",
                     count: overdueJobs.length,
                     color: Colors.red,
                     isSelected: selectedTab == "overdue",

@@ -78,17 +78,17 @@ class _NavScreenState extends State<NavScreen> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.home_outlined),
                 activeIcon: Icon(Icons.home),
-                label: 'Home',
+                label: 'หน้าหลัก',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.assignment_outlined),
                 activeIcon: Icon(Icons.assignment),
-                label: 'Task',
+                label: 'งาน',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.cloud_upload_outlined),
                 activeIcon: Icon(Icons.cloud_upload),
-                label: 'Submit',
+                label: 'ส่งงาน',
               ),
             ],
           ),

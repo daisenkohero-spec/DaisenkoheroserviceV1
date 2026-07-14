@@ -68,7 +68,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       ),
                       const SizedBox(width: 8),
                       const Text(
-                        "Notifications",
+                        "การแจ้งเตือน",
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -91,7 +91,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     child: allNoti.isEmpty
                         ? const Center(
                             child: Text(
-                              "No notifications",
+                              "ไม่มีการแจ้งเตือน",
                               style: TextStyle(color: Colors.grey),
                             ),
                           )
@@ -103,7 +103,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     const Text(
-                                      "Today",
+                                      "วันนี้",
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -142,7 +142,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     const Text(
-                                      "Overdue",
+                                      "เลยกำหนด",
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -181,7 +181,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     const Text(
-                                      "This Week",
+                                      "สัปดาห์นี้",
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -323,7 +323,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Text(
-                              "Completed",
+                              "เสร็จสิ้น",
                               style: TextStyle(
                                 fontSize: 10,
                                 color: Colors.green,
@@ -339,7 +339,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       const Padding(
                         padding: EdgeInsets.only(top: 4),
                         child: Text(
-                          "Late",
+                          "มาสาย",
                           style: TextStyle(color: Colors.red, fontSize: 12),
                         ),
                       ),

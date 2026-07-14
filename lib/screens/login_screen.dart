@@ -114,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 14),
                         _inputField(
                           controller: passwordCtrl,
-                          hint: 'Password',
+                          hint: 'รหัสผ่าน',
                           icon: Icons.lock_outline,
                           isPassword: true,
                         ),
@@ -167,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             child: const Text(
-                              'Login',
+                              'เข้าสู่ระบบ',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
