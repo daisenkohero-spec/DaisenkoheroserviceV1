@@ -97,6 +97,8 @@ class AuthProvider extends ChangeNotifier {
       final msg = e.toString();
       if (msg.contains("PASSWORD_WRONG")) {
         _error = "รหัสผ่านไม่ถูกต้อง";
+      } else if (msg.contains("ADMIN_ACCOUNT")) {
+        _error = "บัญชีนี้เป็นบัญชีแอดมิน กรุณาใช้หน้าหลังบ้าน";
       } else if (msg.contains("USER_NOT_FOUND")) {
         _error = "ไม่พบผู้ใช้งานนี้";
       } else {

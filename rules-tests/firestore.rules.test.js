@@ -41,7 +41,9 @@ beforeEach(async () => {
 
 after(async () => { await env.cleanup(); });
 
-const as = (uid) => env.authenticatedContext(uid).firestore();
+const as = (uid) => env.authenticatedContext(uid, { role: "technician" }).firestore();
+const asAdmin = () => env.authenticatedContext("uidAdmin", { role: "admin" }).firestore();
+const asNoRole = (uid) => env.authenticatedContext(uid).firestore();
 
 // --- technicians ---------------------------------------------------------
 
@@ -58,13 +60,13 @@ test("technician cannot read another technician's profile", async () => {
 });
 
 test("self-signed-up stranger cannot read or list technicians", async () => {
-  await assertFails(getDoc(doc(as("stranger"), "technicians/techA")));
-  await assertFails(getDocs(collection(as("stranger"), "technicians")));
-  await assertFails(getDocs(query(collection(as("stranger"), "technicians"), where("phone", "==", "0833333333"))));
+  await assertFails(getDoc(doc(asNoRole("stranger"), "technicians/techA")));
+  await assertFails(getDocs(collection(asNoRole("stranger"), "technicians")));
+  await assertFails(getDocs(query(collection(asNoRole("stranger"), "technicians"), where("phone", "==", "0833333333"))));
 });
 
 test("stranger cannot claim an unlinked technician doc", async () => {
-  await assertFails(updateDoc(doc(as("stranger"), "technicians/techUnlinked"), { authUid: "stranger" }));
+  await assertFails(updateDoc(doc(asNoRole("stranger"), "technicians/techUnlinked"), { authUid: "stranger" }));
 });
 
 test("technician updates own status and fcmToken", async () => {
@@ -98,8 +100,8 @@ test("technician cannot hand a job to someone else", async () => {
 });
 
 test("stranger cannot read any job", async () => {
-  await assertFails(getDoc(doc(as("stranger"), "jobs/jobA")));
-  await assertFails(getDocs(collection(as("stranger"), "jobs")));
+  await assertFails(getDoc(doc(asNoRole("stranger"), "jobs/jobA")));
+  await assertFails(getDocs(collection(asNoRole("stranger"), "jobs")));
 });
 
 // --- activity_events -----------------------------------------------------
@@ -114,12 +116,44 @@ test("technician cannot log events as someone else", async () => {
 
 test("technician cannot read another technician's events (GPS)", async () => {
   await assertFails(getDoc(doc(as("uidA"), "activity_events/evB")));
-  await assertFails(getDocs(collection(as("stranger"), "activity_events")));
+  await assertFails(getDocs(collection(asNoRole("stranger"), "activity_events")));
 });
 
 test("events are append-only", async () => {
   await assertFails(updateDoc(doc(as("uidB"), "activity_events/evB"), { type: "x" }));
   await assertFails(deleteDoc(doc(as("uidB"), "activity_events/evB")));
+});
+
+// --- admin role ----------------------------------------------------------
+
+test("admin reads all technicians, jobs and events", async () => {
+  await assertSucceeds(getDocs(collection(asAdmin(), "technicians")));
+  await assertSucceeds(getDocs(collection(asAdmin(), "jobs")));
+  await assertSucceeds(getDocs(collection(asAdmin(), "activity_events")));
+});
+
+test("admin creates, assigns and removes jobs", async () => {
+  await assertSucceeds(setDoc(doc(asAdmin(), "jobs/new"), { technicianId: "techA", status: "assigned" }));
+  await assertSucceeds(updateDoc(doc(asAdmin(), "jobs/jobA"), { technicianId: "techB" }));
+  await assertSucceeds(deleteDoc(doc(asAdmin(), "jobs/jobB")));
+});
+
+test("admin manages technician profiles", async () => {
+  await assertSucceeds(setDoc(doc(asAdmin(), "technicians/techNew"), { name: "N", phone: "0844444444" }));
+  await assertSucceeds(updateDoc(doc(asAdmin(), "technicians/techB"), { radiusKm: 20 }));
+});
+
+test("admin cannot edit or delete the activity log", async () => {
+  await assertFails(updateDoc(doc(asAdmin(), "activity_events/evB"), { type: "x" }));
+  await assertFails(deleteDoc(doc(asAdmin(), "activity_events/evB")));
+});
+
+test("technicians and role-less accounts get no admin powers", async () => {
+  await assertFails(setDoc(doc(as("uidA"), "jobs/new"), { technicianId: "techA" }));
+  await assertFails(setDoc(doc(asNoRole("stranger"), "jobs/new"), { technicianId: "techA" }));
+  await assertFails(getDocs(collection(asNoRole("stranger"), "technicians")));
+  const fakeRole = env.authenticatedContext("stranger", { role: "Admin" }).firestore();
+  await assertFails(getDocs(collection(fakeRole, "jobs")));
 });
 
 // --- default deny --------------------------------------------------------
