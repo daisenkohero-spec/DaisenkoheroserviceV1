@@ -3,7 +3,10 @@ rules_version = '2';
 // Security rules for the Daisenko Hero Service technician app.
 // Auth model: each technician signs in with Firebase Auth (Email/Password,
 // email = "<phone>@daisenkohero.local"). The technician's Firestore doc is
-// linked to their Auth account via the `authUid` field.
+// linked to their Auth account via the `authUid` field, which is set ONLY by
+// admin tooling (scripts/add-technician.js, scripts/migrate-auth.js) — never by
+// the app. Anyone holding the app's public config can create a Firebase Auth
+// account, so "signed in" alone must never grant access to anyone's data.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -15,26 +18,25 @@ service cloud.firestore {
     // (i.e. that doc's authUid matches their Firebase Auth uid).
     function ownsTechnician(techId) {
       return isSignedIn()
+        && techId is string
+        && exists(/databases/$(database)/documents/technicians/$(techId))
         && get(/databases/$(database)/documents/technicians/$(techId)).data.authUid
              == request.auth.uid;
     }
 
     match /technicians/{techId} {
-      // Any signed-in technician may read technician profiles (needed for
-      // job/customer context). Tighten to `ownsTechnician(techId)` if you
-      // want each tech to see only their own profile.
-      allow read: if isSignedIn();
+      // A technician may read only their own profile. The login query
+      // `where('authUid', '==', uid)` satisfies this rule.
+      allow read: if isSignedIn() && resource.data.authUid == request.auth.uid;
 
-      // A technician may update only their own doc. The second clause lets a
-      // freshly-authenticated user claim an as-yet-unlinked doc by setting
-      // authUid to their own uid (first-login linking). Once linked it's fixed.
-      allow update: if isSignedIn() && (
-        resource.data.authUid == request.auth.uid ||
-        (!("authUid" in resource.data)
-          && request.resource.data.authUid == request.auth.uid)
-      );
+      // A technician may update their own doc, but not the fields that link it
+      // to an account or identify it.
+      allow update: if isSignedIn()
+        && resource.data.authUid == request.auth.uid
+        && !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['authUid', 'phone']);
 
-      // Creating/deleting technicians is an admin action (console / backend).
+      // Creating/deleting technicians is an admin action (Admin SDK).
       allow create, delete: if false;
     }
 
@@ -43,21 +45,18 @@ service cloud.firestore {
       allow read: if ownsTechnician(resource.data.technicianId);
       allow update: if ownsTechnician(resource.data.technicianId)
         && ownsTechnician(request.resource.data.technicianId);
-      // Jobs are created/removed by admin (console / backend), not the app.
+      // Jobs are created/removed by admin (Admin SDK), not the app.
       allow create, delete: if false;
     }
 
     match /activity_events/{eventId} {
-      // Append-only usage log: a technician may only add events about
+      // Append-only usage log: a technician may only add and read events about
       // themselves, and events can never be edited or deleted.
       allow create: if ownsTechnician(request.resource.data.technicianId);
-      allow read: if isSignedIn();
+      allow read: if ownsTechnician(resource.data.technicianId);
       allow update, delete: if false;
     }
 
-    // Legacy/unused collection — deny by default.
-    match /users/{docId} {
-      allow read, write: if false;
-    }
+    // Everything else (including the legacy `users` collection) is denied.
   }
 }

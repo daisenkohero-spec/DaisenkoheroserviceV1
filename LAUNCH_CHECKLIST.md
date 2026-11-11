@@ -25,7 +25,7 @@ Production-readiness gaps, grouped by priority. Check off as completed.
 - [ ] **Revert pilot geofence.** `AttendanceProvider.allowedRadius` is 50 km for testing —
       set back to the real value (~100 m), ideally a config value, before production.
 - [ ] **Remove dead backend code.** Unused `ApiClient` (points at `localhost:3000` /
-      nonexistent `api.daisenkohero.com`) and the parked Node `server/`.
+      nonexistent `api.daisenkohero.com`). The parked Node `server/` has been removed.
 - [ ] **Strip debug `print` statements** across `lib/` (they leak to the browser console).
 - [ ] **Error monitoring.** Add Crashlytics or Sentry so field failures are visible.
 - [ ] **App Check.** Firebase keys ship in the public web bundle; App Check guards against

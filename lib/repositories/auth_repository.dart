@@ -13,7 +13,7 @@ class AuthRepository {
   /// เข้าสู่ระบบ:
   /// 1) ยืนยันรหัสผ่านผ่าน Firebase Auth (รหัสผ่านถูก hash โดย Firebase)
   ///    เพื่อให้ request.auth ใช้งานได้ใน Security Rules
-  /// 2) ดึงโปรไฟล์ช่างจาก Firestore โดยผูกด้วย authUid
+  /// 2) ดึงโปรไฟล์ช่างจาก Firestore ที่ผูกด้วย authUid (แอดมินผูกไว้แล้ว)
   Future<UserModel> login({
     required String phone,
     required String password,
@@ -36,15 +36,16 @@ class AuthRepository {
     }
 
     final uid = cred.user!.uid;
-    final technician = await _fetchTechnician(uid: uid, phone: phone);
+    final technician = await _fetchTechnician(uid: uid);
     return UserModel(id: technician.id, name: technician['name'], token: uid);
   }
 
   /// ดึงเอกสารช่างที่ผูกกับ authUid นี้
-  /// เผื่อกรณีช่างเดิม (ยังไม่มี authUid) จะผูกด้วยเบอร์โทรให้ครั้งแรกที่ล็อกอิน
+  /// การผูก authUid ทำโดยแอดมินเท่านั้น (scripts/add-technician.js หรือ
+  /// scripts/migrate-auth.js) — แอปไม่ผูกเองแล้ว เพื่อไม่ให้บัญชีที่สมัครเอง
+  /// ยึดเอกสารช่างคนอื่นได้
   Future<DocumentSnapshot<Map<String, dynamic>>> _fetchTechnician({
     required String uid,
-    required String phone,
   }) async {
     final byUid = await _db
         .collection('technicians')
@@ -52,24 +53,12 @@ class AuthRepository {
         .limit(1)
         .get();
 
-    if (byUid.docs.isNotEmpty) {
-      return byUid.docs.first;
-    }
-
-    // ผูก authUid ครั้งแรกสำหรับช่างเดิมที่จับคู่ด้วยเบอร์โทร
-    final byPhone = await _db
-        .collection('technicians')
-        .where('phone', isEqualTo: phone)
-        .limit(1)
-        .get();
-
-    if (byPhone.docs.isEmpty) {
+    if (byUid.docs.isEmpty) {
+      // มีบัญชี Auth แต่ยังไม่ได้ผูกกับช่าง: ออกจากระบบแล้วแจ้งให้ติดต่อแอดมิน
+      await _auth.signOut();
       throw Exception('USER_NOT_FOUND');
     }
-
-    final doc = byPhone.docs.first;
-    await doc.reference.set({'authUid': uid}, SetOptions(merge: true));
-    return doc;
+    return byUid.docs.first;
   }
 
   Future<UserModel> getProfile(String userId) async {

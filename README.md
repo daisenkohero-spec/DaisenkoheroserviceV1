@@ -85,17 +85,14 @@ lib/
 
 ## ⚙️ How to Run
 
-### Quick start (web + API)
+### Web
 
 ```powershell
-# Terminal 1 — API server
-.\scripts\start-api.ps1
-
-# Terminal 2 — Web app
 .\scripts\start-web.ps1
 ```
 
-Open [http://localhost:8080](http://localhost:8080). Full server setup: see [SERVER_SETUP.md](SERVER_SETUP.md).
+Open [http://localhost:8080](http://localhost:8080). Firebase setup and technician
+onboarding: see [FIREBASE_AUTH_SETUP.md](FIREBASE_AUTH_SETUP.md).
 
 ### Mobile / desktop
 

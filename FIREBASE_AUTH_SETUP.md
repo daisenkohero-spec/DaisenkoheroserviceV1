@@ -22,34 +22,40 @@ rules had to be wide open. Now:
 Firebase Console → **Authentication** → **Sign-in method** →
 enable **Email/Password**.
 
-## 2. Create an Auth user for each technician
+## 2. Create the Auth login for each technician
 
-For every technician in the `technicians` collection, create a matching Auth
-user (Console → Authentication → Users → Add user):
+**New technicians** — one command creates the Auth login *and* the linked
+`technicians` doc (needs `scripts/serviceAccountKey.json`, never committed):
+
+```powershell
+cd scripts
+npm install
+node add-technician.js "ช่างสมชาย" 0811112222 <password>
+```
+
+**Existing technicians** (docs created before Firebase Auth) — create their Auth
+user in Console → Authentication → Users → Add user:
 
 | Field | Value |
 |-------|-------|
 | Email | `<phone>@daisenkohero.local` |
-| Password | the technician's existing password |
+| Password | a new password (at least 6 characters) |
 
-Example — for the dev technician (phone `0812345678`, password `1234`):
+## 3. Link `authUid` and remove plaintext passwords
 
-- Email: `0812345678@daisenkohero.local`
-- Password: `1234`
+The app does **not** link accounts on first login: anyone with the app's public
+config can create a Firebase Auth account, so a self-claim path would let a
+stranger take over any unlinked technician. Linking is done by admin tooling only.
 
-### Linking `authUid`
+```powershell
+cd scripts
+node migrate-auth.js            # dry run — review the output
+node migrate-auth.js --apply    # link authUid + delete every `password` field
+```
 
-On the technician's **first login**, the app automatically writes the new Auth
-`uid` into their `technicians` doc as `authUid` (see `AuthRepository.login`).
-The security rule allows this one-time claim only while `authUid` is unset.
-
-If you prefer to avoid relying on the self-claim rule, set `authUid` manually on
-each technician doc to the uid shown in the Authentication → Users list.
-
-## 3. Remove plaintext passwords (after migration)
-
-Once every technician can log in via Firebase Auth, delete the `password` field
-from the `technicians` documents — it is no longer used and should not be stored.
+The script lists any technician it could not link (no Auth user yet). Create
+their login, then run it again. Until a technician is linked, login shows
+"ไม่พบผู้ใช้งานนี้".
 
 ## 4. Deploy the security rules
 
@@ -67,20 +73,33 @@ Console → **Storage** → **Get started** (if you haven't already).
 
 ## 5. What the rules enforce
 
-- **technicians** — signed-in techs can read profiles; a tech can update only
-  their own doc (matched by `authUid`); create/delete are console-only.
+- **technicians** — a tech can read and update only their own doc (matched by
+  `authUid`) and cannot change `authUid` or `phone`; create/delete are Admin SDK only.
 - **jobs** — a tech can read/update only jobs whose `technicianId` belongs to
-  them; create/delete are console-only.
-- **activity_events** — append-only: a tech can add events only about
-  themselves; no edits or deletes.
+  them and cannot reassign a job; create/delete are Admin SDK only.
+- **activity_events** — append-only: a tech can add and read only their own events.
+- **everything else** — denied.
 - **storage `job_photos/`** — signed-in techs can read; uploads must be an
   image under 10 MB.
 
+Being signed in is never enough on its own: a self-created Auth account that no
+technician doc points at can read nothing.
+
+## 6. Test the rules locally
+
+Needs Node and Java (for the emulator). Uses a demo project, no real data:
+
+```powershell
+cd rules-tests
+npm install
+npm test
+```
+
 ## Notes / caveats
 
-- The first-login `authUid` self-claim rule lets any signed-in user claim a
-  technician doc that has no `authUid` yet. For a small internal team this is
-  low risk (each doc can only be claimed once). Set `authUid` manually in step 2
-  if you want to remove that path entirely.
-- If you later add an admin web dashboard, give it the Firebase **Admin SDK**
-  (service account) — it bypasses these rules by design.
+- Storage `job_photos/` still lets any signed-in user upload to any job's
+  folder; restrict it to the job's technician when the booking system lands.
+- Firebase Storage and Cloud Functions need the **Blaze** plan.
+- If you later add an admin web dashboard, give admins a custom claim
+  (`role: admin`) and grant access in these rules; server-side code using the
+  Firebase **Admin SDK** bypasses rules by design.

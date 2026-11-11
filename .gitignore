@@ -54,3 +54,5 @@ serviceAccountKey.json
 *firebase-adminsdk*.json
 scripts/node_modules/
 scripts/package-lock.json
+rules-tests/node_modules/
+rules-tests/package-lock.json
