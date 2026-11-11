@@ -1,0 +1,46 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "daisenkoheroservicev1",
+          "appId": "1:519440484589:android:403384608f2306f5a724e4",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "daisenkoheroservicev1",
+          "configurations": {
+            "android": "1:519440484589:android:403384608f2306f5a724e4",
+            "ios": "1:519440484589:ios:9f375fc56d9af962a724e4",
+            "macos": "1:519440484589:ios:9f375fc56d9af962a724e4",
+            "web": "1:519440484589:web:f8de880f85f383a1a724e4",
+            "windows": "1:519440484589:web:fee64a2288313e76a724e4"
+          }
+        }
+      }
+    }
+  }
+}

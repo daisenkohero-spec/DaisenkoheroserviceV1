@@ -1,0 +1,9 @@
+{
+  "name": "dhs-scripts",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Admin scripts for Daisenko Hero Service (pilot job entry).",
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}

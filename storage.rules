@@ -1,0 +1,23 @@
+rules_version = '2';
+
+// Storage rules for the Daisenko Hero Service technician app.
+// Finish-job proof photos live under job_photos/{jobId}/{fileName}.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    match /job_photos/{jobId}/{fileName} {
+      // Any signed-in technician may view job photos.
+      allow read: if request.auth != null;
+
+      // Uploads must be authenticated, an image, and under 10 MB.
+      allow write: if request.auth != null
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Deny everything else by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

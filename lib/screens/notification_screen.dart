@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/job_provider.dart';
+import '../providers/auth_provider.dart';
 import '../models/job_model.dart';
 import 'task_screen.dart';
 
@@ -17,7 +18,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
     super.initState();
 
     Future.microtask(() {
-      context.read<JobProvider>().loadJobs("tech001");
+      if (!mounted) return;
+      // โหลดงานของช่างที่ล็อกอินจริง (แทน id ที่ hardcode)
+      final techId = context.read<AuthProvider>().user?.id;
+      if (techId != null) {
+        context.read<JobProvider>().loadJobs(techId);
+      }
     });
   }
 
