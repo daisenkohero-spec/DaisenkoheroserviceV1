@@ -662,7 +662,7 @@ class _HomeScreenState extends State<HomeScreen> {
       displayJobs = overdueJobs;
     }
     final completedToday = todayJobs
-        .where((j) => j.status == JobStatus.completed)
+        .where((j) => j.isDone)
         .length;
 
     final progress = todayJobs.isEmpty

@@ -105,7 +105,7 @@ class _FinishJobScreenState extends State<FinishJobScreen> {
       }
     }
 
-    await jobProvider.updateJob(widget.job);
+    await jobProvider.updateJobStatus(widget.job);
 
     // บันทึกเหตุการณ์จบงาน (พร้อมรูป) ลง activity_events
     final start = widget.job.startedWorkingAt;

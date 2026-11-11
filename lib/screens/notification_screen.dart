@@ -248,7 +248,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: job.status == JobStatus.completed
+            color: job.isDone
                 ? Colors.grey.shade100
                 : Colors.white,
             borderRadius: BorderRadius.circular(18),
@@ -305,14 +305,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 15,
-                              color: job.status == JobStatus.completed
+                              color: job.isDone
                                   ? Colors.grey
                                   : Colors.black,
                             ),
                           ),
                         ),
 
-                        if (job.status == JobStatus.completed)
+                        if (job.isDone)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -406,7 +406,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     Color color;
 
     ///  ใช้ status ตัดก่อน
-    if (job.status == JobStatus.completed) {
+    if (job.isDone) {
       icon = Icons.task_alt;
       color = Colors.green;
     } else {
@@ -440,7 +440,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   String _getTitle(Job job) {
-    if (job.status == JobStatus.completed) {
+    if (job.isDone) {
       return "เสร็จแล้ว: ${job.service}";
     }
 

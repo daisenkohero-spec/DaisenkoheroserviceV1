@@ -35,13 +35,13 @@ class _TaskScreenState extends State<TaskScreen> {
     final overdueJobs = jobProvider.overdueJobs;
 
     final upcomingJobs = jobs.where((j) {
-      return j.status != JobStatus.completed &&
+      return !j.isDone &&
           j.status != JobStatus.working &&
           j.startTime.isAfter(now);
     }).toList();
 
     final finishedJobs = jobs
-        .where((j) => j.status == JobStatus.completed)
+        .where((j) => j.isDone)
         .toList();
 
     return Scaffold(
@@ -230,7 +230,7 @@ class _TaskScreenState extends State<TaskScreen> {
     final selectedId = context.watch<JobProvider>().selectedJobId;
     final isSelected = job.id == selectedId;
 
-    final finished = job.status == JobStatus.completed;
+    final finished = job.isDone;
     final isOverdue = context.read<JobProvider>().isOverdue(job);
 
     return GestureDetector(

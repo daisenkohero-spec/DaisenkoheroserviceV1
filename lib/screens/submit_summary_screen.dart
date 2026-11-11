@@ -17,7 +17,7 @@ class SubmitSummaryPage extends StatelessWidget {
     final jobs = context.watch<JobProvider>().jobs;
 
     final completedJobs = jobs
-        .where((j) => j.status == JobStatus.completed)
+        .where((j) => j.isDone)
         .toList();
 
     return Scaffold(
