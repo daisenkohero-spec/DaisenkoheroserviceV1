@@ -54,9 +54,12 @@ class AuthRepository {
         .get();
 
     if (byUid.docs.isEmpty) {
+      // บัญชีแอดมินที่ไม่ใช่ช่าง ใช้หลังบ้านแทนแอปช่าง
+      final token = await _auth.currentUser?.getIdTokenResult();
+      final isAdmin = token?.claims?['role'] == 'admin';
       // มีบัญชี Auth แต่ยังไม่ได้ผูกกับช่าง: ออกจากระบบแล้วแจ้งให้ติดต่อแอดมิน
       await _auth.signOut();
-      throw Exception('USER_NOT_FOUND');
+      throw Exception(isAdmin ? 'ADMIN_ACCOUNT' : 'USER_NOT_FOUND');
     }
     return byUid.docs.first;
   }

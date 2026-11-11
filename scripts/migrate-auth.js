@@ -10,6 +10,8 @@
 //      The app no longer links accounts on first login, so an unlinked
 //      technician cannot log in until this runs.
 //   2. Deletes the legacy plaintext `password` field.
+//   3. Gives every linked login the `technician` role claim (unless it
+//      already has a role, e.g. an admin who is also on the tools).
 //
 // Technicians with no matching Auth user are listed at the end: create their
 // login with add-technician.js (or Console → Authentication → Add user) and
@@ -36,6 +38,7 @@ async function main() {
   const missing = [];
   let linked = 0;
   let stripped = 0;
+  let roled = 0;
 
   for (const doc of snap.docs) {
     const data = doc.data();
@@ -61,6 +64,16 @@ async function main() {
       }
     }
 
+    const uid = update.authUid || data.authUid;
+    if (uid) {
+      const user = await auth.getUser(uid).catch(() => null);
+      if (user && !(user.customClaims && user.customClaims.role)) {
+        console.log(`${apply ? "ROLE" : "would set role"} ${doc.id}: technician`);
+        if (apply) await auth.setCustomUserClaims(uid, { ...(user.customClaims || {}), role: "technician" });
+        roled++;
+      }
+    }
+
     if ("password" in data) {
       update.password = admin.firestore.FieldValue.delete();
       stripped++;
@@ -74,7 +87,7 @@ async function main() {
   }
 
   console.log("");
-  console.log(`${snap.size} technicians · ${linked} linked · ${stripped} passwords removed${apply ? "" : " (dry run)"}`);
+  console.log(`${snap.size} technicians · ${linked} linked · ${stripped} passwords removed · ${roled} roles set${apply ? "" : " (dry run)"}`);
   if (missing.length) {
     console.log("\nCould not link (create their Auth login, then re-run):");
     missing.forEach((m) => console.log(`  - ${m}`));
