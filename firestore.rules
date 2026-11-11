@@ -17,7 +17,7 @@ service cloud.firestore {
     // Office staff. The `role` custom claim is set only by the Admin SDK
     // (scripts/set-role.js), so a self-created account can never carry it.
     function isAdmin() {
-      return isSignedIn() && request.auth.token.role == 'admin';
+      return isSignedIn() && request.auth.token.get('role', '') == 'admin';
     }
 
     // True if the signed-in user owns the technician doc `techId`
