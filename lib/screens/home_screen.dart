@@ -200,6 +200,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(30),
                           onTap: () async {
+                            final choice = await _showAccountSheet(context);
+                            if (!context.mounted) return;
+                            if (choice == _AccountAction.linkGoogle) {
+                              await _linkGoogle(context);
+                              return;
+                            }
+                            if (choice != _AccountAction.logout) return;
+
                             final confirm = await showDialog<bool>(
                               context: context,
                               barrierDismissible: false,
@@ -1072,4 +1080,63 @@ Widget _statusBox({
       ),
     ),
   );
+}
+
+// -----------------------------------------------------------------------------
+// เมนูบัญชี (แตะที่ชื่อผู้ใช้): เชื่อมบัญชี Google / ออกจากระบบ
+// -----------------------------------------------------------------------------
+
+enum _AccountAction { linkGoogle, logout }
+
+Future<_AccountAction?> _showAccountSheet(BuildContext context) {
+  final googleEmail = context.read<AuthProvider>().linkedGoogleEmail;
+  final linked = googleEmail != null;
+
+  return showModalBottomSheet<_AccountAction>(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (sheetContext) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(
+                linked ? Icons.check_circle : Icons.link_rounded,
+                color: linked ? Colors.green : null,
+              ),
+              title: Text(
+                linked ? "เชื่อมบัญชี Google แล้ว" : "เชื่อมบัญชี Google",
+              ),
+              subtitle: Text(
+                googleEmail != null
+                    ? (googleEmail.isEmpty
+                          ? "ใช้ปุ่ม Google ตอนเข้าสู่ระบบได้"
+                          : googleEmail)
+                    : "ครั้งต่อไปเข้าสู่ระบบด้วย Google ได้ ไม่ต้องจำรหัสผ่าน",
+              ),
+              enabled: !linked,
+              onTap: linked
+                  ? null
+                  : () => Navigator.pop(sheetContext, _AccountAction.linkGoogle),
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout_rounded),
+              title: const Text("ออกจากระบบ"),
+              onTap: () => Navigator.pop(sheetContext, _AccountAction.logout),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Future<void> _linkGoogle(BuildContext context) async {
+  final message = await context.read<AuthProvider>().linkGoogle();
+  if (message == null || !context.mounted) return; // ผู้ใช้กดยกเลิก
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
