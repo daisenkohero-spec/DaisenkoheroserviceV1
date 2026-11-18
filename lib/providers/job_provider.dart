@@ -331,6 +331,41 @@ class JobProvider extends ChangeNotifier {
   /// ===============================
   /// Update job
   /// ===============================
+  // ---------------------------------------------------------------------------
+  // เบอร์ลูกค้า: อยู่ใน jobs/{id}/private/contact และ Security Rules เปิดให้ช่าง
+  // อ่านได้เฉพาะตั้งแต่ 12 ชม. ก่อนเวลานัด จนถึง 24 ชม. หลังปิดงาน
+  // นอกช่วงนั้นคืนค่า null (ช่างจึงไม่มีเบอร์ลูกค้าเก็บไว้ติดต่อเองภายหลัง)
+  // ---------------------------------------------------------------------------
+
+  static const contactWindowMessage =
+      "เบอร์ลูกค้าจะแสดงตั้งแต่ 12 ชม. ก่อนเวลานัด จนถึง 24 ชม. หลังปิดงาน";
+
+  final Map<String, Future<String?>> _phoneCache = {};
+
+  Future<String?> customerPhone(Job job, {bool refresh = false}) {
+    if (refresh) _phoneCache.remove(job.id);
+    return _phoneCache.putIfAbsent(job.id, () => _loadCustomerPhone(job));
+  }
+
+  Future<String?> _loadCustomerPhone(Job job) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection("jobs")
+          .doc(job.id)
+          .collection("private")
+          .doc("contact")
+          .get();
+      final phone = (doc.data()?["phone"] ?? "").toString().trim();
+      if (phone.isNotEmpty) return phone;
+    } on FirebaseException catch (e) {
+      if (e.code != "permission-denied") debugPrint("customerPhone error: $e");
+      _phoneCache.remove(job.id); // ลองใหม่ได้เมื่อถึงช่วงเวลา
+      return null;
+    }
+    // งานเก่าที่ยังไม่ได้ย้ายเบอร์ (ก่อนรัน scripts/migrate-contact.js)
+    return job.phone.isNotEmpty ? job.phone : null;
+  }
+
   /// ฟิลด์สำหรับเปลี่ยนสถานะงาน: เขียน `status` และต่อท้าย `timeline`
   /// ทุกการเปลี่ยนสถานะต้องผ่านตรงนี้ เพื่อให้ประวัติของงานครบ
   /// (ใช้เวลาเครื่อง เพราะ serverTimestamp ใส่ใน array ไม่ได้)

@@ -30,6 +30,17 @@ service cloud.firestore {
              == request.auth.uid;
     }
 
+    function contactWindowOpen(job) {
+      return job.get('startTime', null) is timestamp
+        && request.time >= job.startTime - duration.value(12, 'h')
+        && !(job.get('status', '') in ['cancelled', 'expired'])
+        && (
+          !(job.get('status', '') in ['completed', 'closed'])
+          || (job.get('finishedAt', null) is timestamp
+              && request.time < job.finishedAt + duration.value(24, 'h'))
+        );
+    }
+
     match /technicians/{techId} {
       // A technician may read only their own profile. The login query
       // `where('authUid', '==', uid)` satisfies this rule.
@@ -55,6 +66,18 @@ service cloud.firestore {
       allow update: if isAdmin() || (ownsTechnician(resource.data.technicianId)
         && ownsTechnician(request.resource.data.technicianId));
       allow create, delete: if isAdmin();
+
+      // Customer contact (phone). A technician may read it only around their
+      // own job: from 12 hours before the start time until 24 hours after the
+      // job is finished, and never for cancelled/expired jobs. This keeps
+      // customers from being contacted off-platform later. Admins: full access.
+      match /private/{docId} {
+        allow read: if isAdmin() || (
+          ownsTechnician(get(/databases/$(database)/documents/jobs/$(jobId)).data.technicianId)
+          && contactWindowOpen(get(/databases/$(database)/documents/jobs/$(jobId)).data)
+        );
+        allow write: if isAdmin();
+      }
     }
 
     match /activity_events/{eventId} {

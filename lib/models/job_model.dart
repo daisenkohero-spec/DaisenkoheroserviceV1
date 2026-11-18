@@ -243,7 +243,8 @@ class Job {
       "end": end,
       "service": service,
       "customer": customer,
-      "phone": phone,
+      // เบอร์ลูกค้าเก็บแยกใน jobs/{id}/private/contact (เปิดให้ช่างเห็นเฉพาะช่วงงาน)
+      // แอปช่างจึงไม่เขียนเบอร์กลับลงเอกสารงาน
       "place": place,
       "mapUrl": mapUrl,
       "customerNote": customerNote,

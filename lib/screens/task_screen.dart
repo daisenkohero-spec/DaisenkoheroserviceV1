@@ -226,6 +226,21 @@ class _TaskScreenState extends State<TaskScreen> {
     await launchUrl(uri);
   }
 
+  /// โทรหาลูกค้า: เบอร์เปิดให้เฉพาะช่วงงาน (ดู JobProvider.customerPhone)
+  Future<void> _callCustomer(Job job) async {
+    final phone = await context
+        .read<JobProvider>()
+        .customerPhone(job, refresh: true);
+    if (!mounted) return;
+    if (phone == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(JobProvider.contactWindowMessage)),
+      );
+      return;
+    }
+    await _call(phone);
+  }
+
   Widget _item(Job job) {
     final selectedId = context.watch<JobProvider>().selectedJobId;
     final isSelected = job.id == selectedId;
@@ -344,23 +359,29 @@ class _TaskScreenState extends State<TaskScreen> {
                   ],
                 ),
 
-                if (job.phone.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Row(
-                      children: [
-                        Icon(Icons.phone, size: 14, color: Colors.grey[500]),
-                        const SizedBox(width: 4),
-                        Text(
-                          job.phone,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
+                FutureBuilder<String?>(
+                  future: context.read<JobProvider>().customerPhone(job),
+                  builder: (context, snap) {
+                    final phone = snap.data;
+                    if (phone == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        children: [
+                          Icon(Icons.phone, size: 14, color: Colors.grey[500]),
+                          const SizedBox(width: 4),
+                          Text(
+                            phone,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
 
                 const SizedBox(height: 6),
 
@@ -472,7 +493,7 @@ class _TaskScreenState extends State<TaskScreen> {
                             'โทร',
                             style: TextStyle(color: accentColor),
                           ),
-                          onPressed: finished ? null : () => _call(job.phone),
+                          onPressed: finished ? null : () => _callCustomer(job),
                         ),
                       ),
                       const SizedBox(width: 10),

@@ -10,7 +10,7 @@ const {
 } = require("@firebase/rules-unit-testing");
 const {
   doc, getDoc, getDocs, setDoc, updateDoc, addDoc, deleteDoc,
-  collection, query, where, serverTimestamp,
+  collection, query, where, serverTimestamp, Timestamp,
 } = require("firebase/firestore");
 
 let env;
@@ -36,6 +36,19 @@ beforeEach(async () => {
     await setDoc(doc(db, "jobs/jobA"), { technicianId: "techA", status: "assigned", customer: "C1" });
     await setDoc(doc(db, "jobs/jobB"), { technicianId: "techB", status: "assigned", customer: "C2" });
     await setDoc(doc(db, "activity_events/evB"), { technicianId: "techB", type: "attendance_checkin" });
+    const at = (hours) => Timestamp.fromMillis(Date.now() + hours * 3600 * 1000);
+    const contactJobs = {
+      jobFar: { technicianId: "techA", status: "assigned", startTime: at(72) },
+      jobSoon: { technicianId: "techA", status: "assigned", startTime: at(2) },
+      jobDoneRecent: { technicianId: "techA", status: "completed", startTime: at(-5), finishedAt: at(-2) },
+      jobDoneOld: { technicianId: "techA", status: "completed", startTime: at(-60), finishedAt: at(-48) },
+      jobCancelled: { technicianId: "techA", status: "cancelled", startTime: at(1) },
+    };
+    for (const [id, data] of Object.entries(contactJobs)) {
+      await setDoc(doc(db, `jobs/${id}`), data);
+      await setDoc(doc(db, `jobs/${id}/private/contact`), { phone: "0899999999" });
+    }
+    await setDoc(doc(db, "jobs/jobB/private/contact"), { phone: "0888888888" });
   });
 });
 
@@ -102,6 +115,29 @@ test("technician cannot hand a job to someone else", async () => {
 test("stranger cannot read any job", async () => {
   await assertFails(getDoc(doc(asNoRole("stranger"), "jobs/jobA")));
   await assertFails(getDocs(collection(asNoRole("stranger"), "jobs")));
+});
+
+// --- customer contact window ---------------------------------------------
+
+const contact = (db, jobId) => getDoc(doc(db, `jobs/${jobId}/private/contact`));
+
+test("technician sees customer phone only around the job", async () => {
+  await assertSucceeds(contact(as("uidA"), "jobSoon"));
+  await assertSucceeds(contact(as("uidA"), "jobDoneRecent"));
+  await assertFails(contact(as("uidA"), "jobFar"));
+  await assertFails(contact(as("uidA"), "jobDoneOld"));
+  await assertFails(contact(as("uidA"), "jobCancelled"));
+});
+
+test("technician never sees another technician's customer phone", async () => {
+  await assertFails(contact(as("uidA"), "jobB"));
+  await assertFails(contact(asNoRole("stranger"), "jobSoon"));
+});
+
+test("technicians cannot write contact; admins can read and write", async () => {
+  await assertFails(setDoc(doc(as("uidA"), "jobs/jobSoon/private/contact"), { phone: "1" }));
+  await assertSucceeds(contact(asAdmin(), "jobFar"));
+  await assertSucceeds(setDoc(doc(asAdmin(), "jobs/jobFar/private/contact"), { phone: "0811111111" }));
 });
 
 // --- activity_events -----------------------------------------------------
