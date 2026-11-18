@@ -124,35 +124,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           height: 52,
                           child: ElevatedButton(
                             onPressed: canLogin && !auth.isLoading
-                                ? () async {
-                                    await context.read<AuthProvider>().login(
+                                ? () => _signIn(
+                                    () => context.read<AuthProvider>().login(
                                       usernameCtrl.text,
                                       passwordCtrl.text,
-                                    );
-
-                                    final updatedAuth = context
-                                        .read<AuthProvider>();
-
-                            
-                                    if (updatedAuth.error != null) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(updatedAuth.error!),
-                                        ),
-                                      );
-                                    }
-                                    
-                                    else {
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => const NavScreen(),
-                                        ),
-                                      );
-                                    }
-                                  }
+                                    ),
+                                  )
                                 : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primaryColor,
@@ -169,6 +146,76 @@ class _LoginScreenState extends State<LoginScreen> {
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
                               ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 18),
+                        Row(
+                          children: const [
+                            Expanded(child: Divider()),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              child: Text(
+                                'หรือ',
+                                style: TextStyle(color: AppColors.textHint),
+                              ),
+                            ),
+                            Expanded(child: Divider()),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+
+                        /// GOOGLE (ใช้ได้หลังจากเชื่อมบัญชี Google ในแอปแล้ว)
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: OutlinedButton(
+                            onPressed: auth.isLoading
+                                ? null
+                                : () => _signIn(
+                                    () => context
+                                        .read<AuthProvider>()
+                                        .loginWithGoogle(),
+                                  ),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'G',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF4285F4),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                const Text(
+                                  'เข้าสู่ระบบด้วย Google',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -191,6 +238,24 @@ class _LoginScreenState extends State<LoginScreen> {
         ],
       ),
     );
+  }
+
+  /// เข้าสู่ระบบ (เบอร์โทรหรือ Google) แล้วไปหน้าหลักเมื่อสำเร็จ
+  Future<void> _signIn(Future<void> Function() signIn) async {
+    await signIn();
+    if (!mounted) return;
+
+    final auth = context.read<AuthProvider>();
+    if (auth.isLoggedIn) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const NavScreen()),
+      );
+    } else if (auth.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(auth.error!)),
+      );
+    }
   }
 
   Widget _inputField({

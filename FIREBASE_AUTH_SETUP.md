@@ -90,6 +90,44 @@ A role change takes effect after the person signs out and back in. An admin
 without a technician profile who opens the technician app sees
 "บัญชีนี้เป็นบัญชีแอดมิน กรุณาใช้หน้าหลังบ้าน".
 
+## 4c. Sign in with Google (optional, per technician)
+
+A technician signs in with phone + password once, taps their name on the Home
+screen → **เชื่อมบัญชี Google**, and picks a Google account. That Google account
+is linked to the *same* Firebase user, so `authUid`, roles and rules are
+unchanged. After that the **เข้าสู่ระบบด้วย Google** button on the login screen
+works for them.
+
+A Google account that was never linked signs in to an empty Firebase user; the
+app deletes that user and shows "บัญชี Google นี้ยังไม่ได้เชื่อมกับช่าง…". It can
+never reach a technician's data.
+
+One-time console setup:
+
+1. **Authentication → Sign-in method → Add new provider → Google → Enable**,
+   pick a support email, Save.
+2. **Web:** works on `localhost` and the Firebase Hosting domains out of the box.
+   Add any other domain under Authentication → Settings → Authorized domains.
+3. **Android:** add the app's SHA-1 fingerprints under Project settings → General
+   → Your apps → Android app → *Add fingerprint*. Get them with:
+
+   ```powershell
+   cd android
+   .\gradlew signingReport
+   ```
+
+   Add the SHA-1 of the `debug` variant (for `flutter run`) and of the release
+   keystore (for Play Store builds). Play Store builds signed by Google Play
+   also need the *App signing key* SHA-1 from Play Console → Setup → App
+   signing. Without these, the Google button fails on Android only.
+
+To unlink a technician's Google account (e.g. a lost Google account), run in
+`scripts/` with their phone number:
+
+```powershell
+node -e "const a=require('firebase-admin');a.initializeApp({credential:a.credential.cert(require('./serviceAccountKey.json'))});a.auth().getUserByEmail('0812345678@daisenkohero.local').then(u=>a.auth().updateUser(u.uid,{providersToUnlink:['google.com']})).then(()=>{console.log('unlinked');process.exit(0)})"
+```
+
 ## 5. What the rules enforce
 
 - **technicians** — a tech can read and update only their own doc (matched by

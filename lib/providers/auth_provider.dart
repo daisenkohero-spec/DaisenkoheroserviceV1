@@ -57,13 +57,48 @@ class AuthProvider extends ChangeNotifier {
   // LOGIN
   // -------------------
 
-  Future<void> login(String username, String password) async {
+  Future<void> login(String username, String password) =>
+      _runLogin(() => _repository.login(phone: username, password: password));
+
+  /// เข้าสู่ระบบด้วย Google (ต้องเชื่อมบัญชีไว้ก่อน)
+  Future<void> loginWithGoogle() => _runLogin(_repository.loginWithGoogle);
+
+  /// อีเมล Google ที่เชื่อมไว้ (null = ยังไม่ได้เชื่อม)
+  String? get linkedGoogleEmail => _repository.linkedGoogleEmail;
+
+  /// เชื่อมบัญชี Google กับช่างที่ล็อกอินอยู่
+  /// คืนค่าข้อความสำหรับแสดงผล (null = ผู้ใช้กดยกเลิก)
+  Future<String?> linkGoogle() async {
+    try {
+      final email = await _repository.linkGoogle();
+      notifyListeners();
+      return email.isEmpty
+          ? "เชื่อมบัญชี Google แล้ว"
+          : "เชื่อมบัญชี Google แล้ว ($email)";
+    } catch (e) {
+      debugPrint("LINK GOOGLE ERROR: $e");
+      final msg = e.toString();
+      if (msg.contains("CANCELLED")) return null;
+      if (msg.contains("ALREADY_LINKED")) {
+        return "บัญชีนี้เชื่อม Google ไว้แล้ว";
+      }
+      if (msg.contains("GOOGLE_IN_USE")) {
+        return "บัญชี Google นี้ถูกใช้กับผู้ใช้อื่นแล้ว กรุณาเลือกบัญชีอื่น หรือติดต่อแอดมิน";
+      }
+      if (msg.contains("REAUTH")) {
+        return "กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่ก่อนเชื่อมบัญชี Google";
+      }
+      return "เชื่อมบัญชี Google ไม่สำเร็จ";
+    }
+  }
+
+  Future<void> _runLogin(Future<UserModel> Function() signIn) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final user = await _repository.login(phone: username, password: password);
+      final user = await signIn();
 
       _currentUser = user;
 
@@ -94,11 +129,17 @@ class AuthProvider extends ChangeNotifier {
       );
     } catch (e) {
       debugPrint("LOGIN ERROR: $e");
+      _currentUser = null;
       final msg = e.toString();
-      if (msg.contains("PASSWORD_WRONG")) {
+      if (msg.contains("CANCELLED")) {
+        _error = null; // ผู้ใช้ปิดหน้าต่าง Google เอง ไม่ต้องแจ้ง
+      } else if (msg.contains("PASSWORD_WRONG")) {
         _error = "รหัสผ่านไม่ถูกต้อง";
       } else if (msg.contains("ADMIN_ACCOUNT")) {
         _error = "บัญชีนี้เป็นบัญชีแอดมิน กรุณาใช้หน้าหลังบ้าน";
+      } else if (msg.contains("GOOGLE_NOT_LINKED")) {
+        _error =
+            "บัญชี Google นี้ยังไม่ได้เชื่อมกับช่าง กรุณาเข้าสู่ระบบด้วยเบอร์โทรก่อน แล้วกดเชื่อมบัญชี Google";
       } else if (msg.contains("USER_NOT_FOUND")) {
         _error = "ไม่พบผู้ใช้งานนี้";
       } else {
