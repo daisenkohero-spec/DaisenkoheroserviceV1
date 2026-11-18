@@ -27,7 +27,9 @@ service cloud.firestore {
         && techId is string
         && exists(/databases/$(database)/documents/technicians/$(techId))
         && get(/databases/$(database)/documents/technicians/$(techId)).data.authUid
-             == request.auth.uid;
+             == request.auth.uid
+        // A technician an admin has disabled loses access to jobs and logs.
+        && get(/databases/$(database)/documents/technicians/$(techId)).data.get('active', true) != false;
     }
 
     function contactWindowOpen(job) {
@@ -52,7 +54,7 @@ service cloud.firestore {
       allow update: if isAdmin() || (isSignedIn()
         && resource.data.authUid == request.auth.uid
         && !request.resource.data.diff(resource.data).affectedKeys()
-              .hasAny(['authUid', 'phone']));
+              .hasAny(['authUid', 'phone', 'cert', 'employmentType', 'active', 'source']));
 
       // Admins manage technician profiles. Login accounts (and the authUid
       // link) are still created by scripts/add-technician.js.
@@ -116,6 +118,12 @@ service cloud.firestore {
         || (isAdmin() && request.resource.data.technicianId == request.auth.uid);
       allow read: if isAdmin() || ownsTechnician(resource.data.technicianId);
       allow update, delete: if false;
+    }
+
+    // Booking settings (config/booking): everyone signed in reads, admins edit.
+    match /config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     // Everything else (including the legacy `users` collection) is denied.

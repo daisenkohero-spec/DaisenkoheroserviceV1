@@ -104,7 +104,16 @@ class AuthRepository {
         .get();
     if (byUid.docs.isEmpty) throw Exception(notFoundCode);
     final doc = byUid.docs.first;
+    await _rejectIfDisabled(doc);
     return UserModel(id: doc.id, name: doc['name'], token: user.uid);
+  }
+
+  /// ช่างที่แอดมินปิดบัญชี (active == false) เข้าแอปไม่ได้
+  Future<void> _rejectIfDisabled(DocumentSnapshot<Map<String, dynamic>> doc) async {
+    if (doc.data()?['active'] == false) {
+      await _auth.signOut();
+      throw Exception('DISABLED');
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -204,6 +213,7 @@ class AuthRepository {
       await _auth.signOut();
       throw Exception(isAdmin ? 'ADMIN_ACCOUNT' : notFoundCode);
     }
+    await _rejectIfDisabled(byUid.docs.first);
     return byUid.docs.first;
   }
 
