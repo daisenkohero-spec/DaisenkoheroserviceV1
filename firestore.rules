@@ -80,6 +80,34 @@ service cloud.firestore {
       }
     }
 
+    // Self sign-up for new technicians (Google). The applicant's own Auth uid is
+    // the doc id. Applicants can only create/edit their own application while
+    // it is pending (or resubmit after a rejection) and can never approve it;
+    // an admin approves by creating the technicians doc with this uid as
+    // authUid, so "signed in with Google" alone still grants no technician data.
+    match /applications/{uid} {
+      function ownApplicationFields() {
+        return request.resource.data.status == 'pending'
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.phone is string
+          && request.resource.data.phone.size() >= 9
+          && request.resource.data.agreedToTerms == true;
+      }
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+      allow create: if isSignedIn() && request.auth.uid == uid
+        && ownApplicationFields()
+        && !request.resource.data.keys().hasAny(['reviewedBy', 'reviewedAt', 'technicianId', 'rejectReason']);
+      allow update: if isAdmin() || (
+        isSignedIn() && request.auth.uid == uid
+        && resource.data.status in ['pending', 'rejected']
+        && ownApplicationFields()
+        && !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['reviewedBy', 'reviewedAt', 'technicianId', 'rejectReason'])
+      );
+      allow delete: if isAdmin();
+    }
+
     match /activity_events/{eventId} {
       // Append-only usage log: a technician may only add and read events about
       // themselves; admins read all (reporting). Nobody edits or deletes.

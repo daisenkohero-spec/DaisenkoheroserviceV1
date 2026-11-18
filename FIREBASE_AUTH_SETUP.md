@@ -140,6 +140,25 @@ To unlink a technician's Google account (e.g. a lost Google account), run in
 node -e "const a=require('firebase-admin');a.initializeApp({credential:a.credential.cert(require('./serviceAccountKey.json'))});a.auth().getUserByEmail('0812345678@daisenkohero.local').then(u=>a.auth().updateUser(u.uid,{providersToUnlink:['google.com']})).then(()=>{console.log('unlinked');process.exit(0)})"
 ```
 
+## 4d. New technicians sign up with Google
+
+On the login screen, **ช่างใหม่? สมัครเป็นช่างด้วย Google** (or the Google
+button) takes a Google account that is not a technician yet to an application
+form: name, phone, service area, Daisenko training level, and the code of
+conduct (jobs from the platform stay on the platform). It is saved as
+`applications/{uid}` with status `pending`.
+
+Admins see pending applications from the person icon (with a count) on the
+dispatcher. **อนุมัติ** checks the phone isn't already a technician, then the
+admin confirms the Daisenko level, the date it was passed (valid 1 year), and
+in-house vs partner. Approval creates the `technicians` doc with the
+applicant's uid as `authUid`; the applicant's screen then opens the
+technician app by itself. **ไม่อนุมัติ** stores a reason the applicant sees and
+can fix and resubmit.
+
+Applicants can't approve themselves or create technician docs; until approved
+they can read nothing but their own application.
+
 ## 5. What the rules enforce
 
 - **technicians** — a tech can read and update only their own doc (matched by

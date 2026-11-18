@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/auth_provider.dart';
 import 'assign_job_screen.dart';
 import 'reporting_screen.dart';
+import 'applications_screen.dart';
 
 /// Admin dispatcher home — today's job board across the whole team.
 class DispatcherScreen extends StatelessWidget {
@@ -35,6 +36,25 @@ class DispatcherScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          // ใบสมัครช่างใหม่ที่รอตรวจ (แสดงจำนวนเป็นตัวเลขบนไอคอน)
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: ApplicationsScreen.pendingStream(),
+            builder: (context, snap) {
+              final count = snap.data?.docs.length ?? 0;
+              return IconButton(
+                tooltip: "ใบสมัครช่างใหม่",
+                icon: Badge(
+                  isLabelVisible: count > 0,
+                  label: Text("$count"),
+                  child: const Icon(Icons.person_add_alt_1),
+                ),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ApplicationsScreen()),
+                ),
+              );
+            },
+          ),
           IconButton(
             tooltip: "รายงานสรุป",
             icon: const Icon(Icons.bar_chart),
