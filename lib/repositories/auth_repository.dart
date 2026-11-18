@@ -85,18 +85,69 @@ class AuthRepository {
     // ผู้ดูแลที่ใช้ Google (เช่นอีเมลร้าน) เข้าหน้า Dispatcher ได้เลย
     if (await currentUserIsAdmin()) return adminUser();
 
-    final technician = await _fetchTechnician(
-      uid: cred.user!.uid,
-      // Google ที่ยังไม่ได้เชื่อม จะได้บัญชีใหม่เปล่า ๆ ลบทิ้งเพื่อไม่ให้ค้าง
-      // และไม่ให้บัญชี Google นั้นถูกล็อกไว้จนเชื่อมกับช่างไม่ได้
-      deleteIfNew: cred.additionalUserInfo?.isNewUser ?? false,
-      notFoundCode: 'GOOGLE_NOT_LINKED',
-    );
-    return UserModel(
-      id: technician.id,
-      name: technician['name'],
-      token: cred.user!.uid,
-    );
+    // บัญชี Google ที่ยังไม่ผูกกับช่าง = ผู้สมัครช่างใหม่ (ไม่ออกจากระบบ
+    // เพื่อให้กรอกใบสมัครต่อได้) แอดมินต้องอนุมัติก่อนจึงจะเป็นช่าง
+    return technicianForCurrentUser(notFoundCode: 'APPLICANT');
+  }
+
+  /// โปรไฟล์ช่างของผู้ใช้ที่ล็อกอินอยู่ (ไม่ล็อกอินใหม่ ไม่ออกจากระบบ)
+  /// ใช้หลังแอดมินอนุมัติใบสมัคร
+  Future<UserModel> technicianForCurrentUser({
+    String notFoundCode = 'USER_NOT_FOUND',
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('NOT_SIGNED_IN');
+    final byUid = await _db
+        .collection('technicians')
+        .where('authUid', isEqualTo: user.uid)
+        .limit(1)
+        .get();
+    if (byUid.docs.isEmpty) throw Exception(notFoundCode);
+    final doc = byUid.docs.first;
+    return UserModel(id: doc.id, name: doc['name'], token: user.uid);
+  }
+
+  // ---------------------------------------------------------------------------
+  // ใบสมัครช่างใหม่: applications/{uid} (uid ของบัญชี Google ผู้สมัคร)
+  // ผู้สมัครเขียนได้เฉพาะของตัวเองและสถานะ pending แอดมินเป็นคนอนุมัติ
+  // ---------------------------------------------------------------------------
+
+  DocumentReference<Map<String, dynamic>>? get myApplicationRef {
+    final uid = _auth.currentUser?.uid;
+    return uid == null ? null : _db.collection('applications').doc(uid);
+  }
+
+  String get currentEmail => _auth.currentUser?.email ?? '';
+
+  Future<bool> hasApplication() async {
+    final ref = myApplicationRef;
+    if (ref == null) return false;
+    try {
+      return (await ref.get()).exists;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> submitApplication({
+    required String name,
+    required String phone,
+    required String area,
+    required int trainingLevel,
+  }) async {
+    final ref = myApplicationRef;
+    if (ref == null) throw Exception('NOT_SIGNED_IN');
+    await ref.set({
+      'name': name.trim(),
+      'phone': phone.trim(),
+      'area': area.trim(),
+      'trainingLevelClaimed': trainingLevel,
+      'email': currentEmail,
+      'agreedToTerms': true,
+      'agreedAt': FieldValue.serverTimestamp(),
+      'status': 'pending',
+      'submittedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   /// เชื่อมบัญชี Google กับช่างที่ล็อกอินอยู่ คืนค่าอีเมล Google ที่เชื่อม

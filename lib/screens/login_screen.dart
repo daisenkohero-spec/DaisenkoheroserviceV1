@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'nav_screen.dart';
 import 'dispatcher/dispatcher_screen.dart';
+import 'application_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -220,6 +221,23 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
+
+                        /// ช่างใหม่สมัครด้วย Google (แอดมินอนุมัติก่อนรับงาน)
+                        const SizedBox(height: 14),
+                        TextButton.icon(
+                          onPressed: auth.isLoading
+                              ? null
+                              : () => _signIn(
+                                  () => context
+                                      .read<AuthProvider>()
+                                      .loginWithGoogle(),
+                                ),
+                          icon: const Icon(Icons.person_add_alt_1_outlined),
+                          label: const Text(
+                            'ช่างใหม่? สมัครเป็นช่างด้วย Google',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -255,6 +273,12 @@ class _LoginScreenState extends State<LoginScreen> {
           builder: (_) =>
               auth.isAdmin ? const DispatcherScreen() : const NavScreen(),
         ),
+      );
+    } else if (auth.isApplicant) {
+      // บัญชี Google ที่ยังไม่เป็นช่าง -> ใบสมัครช่างใหม่
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const ApplicationScreen()),
       );
     } else if (auth.error != null) {
       ScaffoldMessenger.of(context).showSnackBar(

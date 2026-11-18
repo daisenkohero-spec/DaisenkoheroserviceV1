@@ -15,6 +15,7 @@ class AuthProvider extends ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = false;
   bool _isAdmin = false;
+  bool _isApplicant = false;
   String? _error;
 
   // -------------------
@@ -26,6 +27,11 @@ class AuthProvider extends ChangeNotifier {
 
   /// ผู้ดูแล (role claim = admin) -> หน้า Dispatcher
   bool get isAdmin => _isAdmin;
+
+  /// ล็อกอินด้วย Google แล้วแต่ยังไม่เป็นช่าง -> หน้าใบสมัคร
+  bool get isApplicant => _isApplicant;
+
+  AuthRepository get repository => _repository;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -38,6 +44,15 @@ class AuthProvider extends ChangeNotifier {
     final firebaseUser = FirebaseAuth.instance.currentUser;
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString("userId");
+
+    // ผู้สมัครช่างที่ยังรออนุมัติ: มี session แต่ยังไม่มีโปรไฟล์ช่าง
+    if (firebaseUser != null &&
+        userId == null &&
+        await _repository.hasApplication()) {
+      _isApplicant = true;
+      notifyListeners();
+      return;
+    }
 
     if (firebaseUser == null || userId == null) {
       await prefs.clear();
@@ -73,8 +88,26 @@ class AuthProvider extends ChangeNotifier {
         : _repository.login(phone: username, password: password),
   );
 
-  /// เข้าสู่ระบบด้วย Google (ต้องเชื่อมบัญชีไว้ก่อน)
+  /// เข้าสู่ระบบด้วย Google: ช่างที่เชื่อมแล้วเข้าแอปช่าง, แอดมินเข้า Dispatcher,
+  /// บัญชีที่ยังไม่เป็นช่างไปหน้าใบสมัคร (isApplicant)
   Future<void> loginWithGoogle() => _runLogin(_repository.loginWithGoogle);
+
+  /// หลังแอดมินอนุมัติใบสมัคร: เข้าแอปช่างด้วย session เดิม
+  Future<void> completeApprovedSignup() =>
+      _runLogin(_repository.technicianForCurrentUser);
+
+  Future<void> submitApplication({
+    required String name,
+    required String phone,
+    required String area,
+    required int trainingLevel,
+  }) =>
+      _repository.submitApplication(
+        name: name,
+        phone: phone,
+        area: area,
+        trainingLevel: trainingLevel,
+      );
 
   /// อีเมล Google ที่เชื่อมไว้ (null = ยังไม่ได้เชื่อม)
   String? get linkedGoogleEmail => _repository.linkedGoogleEmail;
@@ -108,6 +141,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _runLogin(Future<UserModel> Function() signIn) async {
     _isLoading = true;
     _error = null;
+    _isApplicant = false;
     notifyListeners();
 
     try {
@@ -162,7 +196,10 @@ class AuthProvider extends ChangeNotifier {
       _currentUser = null;
       _isAdmin = false;
       final msg = e.toString();
-      if (msg.contains("CANCELLED")) {
+      if (msg.contains("APPLICANT")) {
+        _isApplicant = true;
+        _error = null;
+      } else if (msg.contains("CANCELLED")) {
         _error = null; // ผู้ใช้ปิดหน้าต่าง Google เอง ไม่ต้องแจ้ง
       } else if (msg.contains("PASSWORD_WRONG")) {
         _error = "รหัสผ่านไม่ถูกต้อง";
@@ -222,6 +259,7 @@ class AuthProvider extends ChangeNotifier {
 
     _currentUser = null;
     _isAdmin = false;
+    _isApplicant = false;
 
     notifyListeners();
   }

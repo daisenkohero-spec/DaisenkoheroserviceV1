@@ -140,6 +140,44 @@ test("technicians cannot write contact; admins can read and write", async () => 
   await assertSucceeds(setDoc(doc(asAdmin(), "jobs/jobFar/private/contact"), { phone: "0811111111" }));
 });
 
+// --- technician sign-up (applications) ------------------------------------
+
+const app = { name: "ช่างใหม่", phone: "0877777777", area: "บางนา", trainingLevelClaimed: 1, agreedToTerms: true, status: "pending" };
+
+test("applicant creates and edits only their own pending application", async () => {
+  const db = asNoRole("newbie");
+  await assertSucceeds(setDoc(doc(db, "applications/newbie"), app));
+  await assertSucceeds(updateDoc(doc(db, "applications/newbie"), { area: "ลาดพร้าว" }));
+  await assertSucceeds(getDoc(doc(db, "applications/newbie")));
+  await assertFails(setDoc(doc(db, "applications/someoneElse"), app));
+  await assertFails(getDoc(doc(asNoRole("other"), "applications/newbie")));
+});
+
+test("applicant cannot approve themselves or skip terms", async () => {
+  const db = asNoRole("newbie");
+  await assertFails(setDoc(doc(db, "applications/newbie"), { ...app, status: "approved" }));
+  await assertFails(setDoc(doc(db, "applications/newbie"), { ...app, agreedToTerms: false }));
+  await assertSucceeds(setDoc(doc(db, "applications/newbie"), app));
+  await assertFails(updateDoc(doc(db, "applications/newbie"), { status: "approved" }));
+  await assertFails(updateDoc(doc(db, "applications/newbie"), { technicianId: "techX" }));
+  await assertFails(setDoc(doc(db, "technicians/selfMade"), { name: "x", authUid: "newbie" }));
+});
+
+test("admin approves; approved applicant can no longer edit", async () => {
+  await assertSucceeds(setDoc(doc(asNoRole("newbie"), "applications/newbie"), app));
+  await assertSucceeds(getDocs(collection(asAdmin(), "applications")));
+  await assertSucceeds(setDoc(doc(asAdmin(), "technicians/techNewbie"), { name: "ช่างใหม่", phone: "0877777777", authUid: "newbie" }));
+  await assertSucceeds(updateDoc(doc(asAdmin(), "applications/newbie"), { status: "approved", technicianId: "techNewbie" }));
+  await assertFails(updateDoc(doc(asNoRole("newbie"), "applications/newbie"), { status: "pending" }));
+  await assertSucceeds(getDoc(doc(asNoRole("newbie"), "technicians/techNewbie")));
+});
+
+test("rejected applicant may resubmit as pending", async () => {
+  await assertSucceeds(setDoc(doc(asNoRole("newbie"), "applications/newbie"), app));
+  await assertSucceeds(updateDoc(doc(asAdmin(), "applications/newbie"), { status: "rejected", rejectReason: "ยังไม่ผ่านอบรม" }));
+  await assertSucceeds(updateDoc(doc(asNoRole("newbie"), "applications/newbie"), { status: "pending", trainingLevelClaimed: 1 }));
+});
+
 // --- activity_events -----------------------------------------------------
 
 test("technician logs an event about themselves", async () => {
