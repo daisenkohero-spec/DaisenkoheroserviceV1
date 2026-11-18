@@ -87,6 +87,7 @@ async function main() {
     endTime: admin.firestore.Timestamp.fromDate(endTime),
     createdAt: admin.firestore.Timestamp.fromDate(now),
     status: "assigned",
+    timeline: [{ status: "assigned", at: admin.firestore.Timestamp.fromDate(now), by: "admin" }],
     notificationType: "newJob",
     priority: "normal",
     isNotificationRead: false,

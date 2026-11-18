@@ -1,14 +1,52 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// สถานะงาน (ดูสเปก AIR-D Hero Service v1 ส่วน "สถานะงาน")
+///
+/// เส้นทางหลัก: pendingPayment → dispatching → assigned → traveling → working
+/// → (quotePending สำหรับงานซ่อม) → completed → closed
+///
+/// `wire` คือค่าที่เก็บใน Firestore (snake_case ตามสเปก)
+/// "เลยกำหนดเวลา" ไม่ใช่สถานะ: คำนวณจาก endTime ดู [Job.isOverdue]
 enum JobStatus {
-  pending,
-  assigned, // ได้รับงานแล้ว (ยังไม่เริ่ม)
-  accepted, // ช่างกดยอมรับงาน
-  traveling, // กำลังไปหน้างาน
-  working, // กำลังทำงาน
-  completed, // เสร็จแล้ว
-  cancelled,
-  overdue, // เลยกำหนดเวลา
+  pendingPayment('pending_payment'), // รอลูกค้าชำระเงิน (ล็อกช่วงเวลา 15 นาที)
+  paymentReview('payment_review'), // สลิปตรวจไม่ผ่าน รอแอดมินตัดสิน
+  dispatching('dispatching'), // จ่ายแล้ว กำลังหาช่าง
+  assigned('assigned'), // ได้ช่างแล้ว (กดรับเองหรือแอดมินมอบหมาย)
+  traveling('traveling'), // ช่างกำลังเดินทาง (ลูกค้าเห็นตำแหน่งสด)
+  working('working'), // ถึงหน้างาน / กำลังทำงาน
+  quotePending('quote_pending'), // งานซ่อม: รออนุมัติใบเสนอราคา
+  completed('completed'), // ช่างกดเสร็จงาน
+  closed('closed'), // ลูกค้ายืนยัน หรือครบ 24 ชม.
+  cancelled('cancelled'),
+  expired('expired'); // ไม่ชำระภายในเวลาที่ล็อกไว้
+
+  const JobStatus(this.wire);
+  final String wire;
+
+  /// ค่าเก่าที่เคยเก็บใน Firestore ก่อนระบบจอง
+  /// - pending / accepted: งานที่แอดมินมอบหมายให้ช่างแล้ว = assigned
+  /// - overdue: เลยเวลาคำนวณจาก endTime แทน จึงกลับเป็น assigned
+  static const Map<String, JobStatus> _legacy = {
+    'pending': JobStatus.assigned,
+    'accepted': JobStatus.assigned,
+    'overdue': JobStatus.assigned,
+  };
+
+  static JobStatus fromWire(Object? value) {
+    final v = (value ?? '').toString().trim().toLowerCase();
+    for (final s in JobStatus.values) {
+      if (s.wire == v || s.name.toLowerCase() == v) return s;
+    }
+    return _legacy[v] ?? JobStatus.assigned;
+  }
+
+  /// งานจบฝั่งช่างแล้ว (นับเป็นงานเสร็จในแอปช่าง)
+  bool get isDone => this == completed || this == closed;
+
+  /// สถานะที่แสดงในแอปช่าง (งานที่ยกเลิก/หมดอายุไม่ต้องแสดง)
+  bool get visibleToTechnician =>
+      this != cancelled && this != expired && this != pendingPayment &&
+      this != paymentReview && this != dispatching;
 }
 
 enum JobNotificationType {
@@ -80,7 +118,7 @@ class Job {
     required this.endTime,
     this.updatedAt,
     required this.technicianId,
-    this.status = JobStatus.pending,
+    this.status = JobStatus.assigned,
     this.notificationType = JobNotificationType.none,
     this.priority = JobPriority.normal,
     this.isNotificationRead = false,
@@ -90,6 +128,11 @@ class Job {
     this.finishedAt,
     this.imagePath,
   });
+  bool get isDone => status.isDone;
+
+  /// เลยเวลานัดแล้วแต่งานยังไม่จบ (คำนวณ ไม่ได้เก็บเป็นสถานะ)
+  bool get isOverdue => !isDone && endTime.isBefore(DateTime.now());
+
   // ==============================
   // Firestore -> Model
   // ==============================
@@ -124,12 +167,7 @@ class Job {
 
       technicianId: json['technicianId'] ?? '',
 
-      status: JobStatus.values.firstWhere(
-        (e) =>
-            e.name.toLowerCase() ==
-            (json['status'] ?? '').toString().toLowerCase(),
-        orElse: () => JobStatus.pending,
-      ),
+      status: JobStatus.fromWire(json['status']),
 
       notificationType: JobNotificationType.values.firstWhere(
         (e) => e.name == (json['notificationType'] ?? 'none'),
@@ -182,7 +220,7 @@ class Job {
       'startTime': startTime.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
       'technicianId': technicianId,
-      'status': status.name,
+      'status': status.wire,
       'notificationType': notificationType.name,
       'priority': priority.name,
       'isNotificationRead': isNotificationRead,
@@ -219,7 +257,7 @@ class Job {
 
       "technicianId": technicianId,
 
-      "status": status.name,
+      "status": status.wire,
       "notificationType": notificationType.name,
       "priority": priority.name,
 

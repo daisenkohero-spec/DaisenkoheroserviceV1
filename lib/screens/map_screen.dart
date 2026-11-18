@@ -50,10 +50,14 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
 
-    widget.job.startTravel = DateTime.now();
-
-    _updateJobStatus("traveling");
-    _sendStartTravel();
+    // เริ่มเดินทางเฉพาะงานที่ยังไม่ออกเดินทาง (เปิดแผนที่ของงานที่ทำอยู่
+    // หรือเสร็จแล้วต้องไม่ย้อนสถานะกลับ)
+    if (widget.job.status == JobStatus.assigned) {
+      widget.job.startTravel = DateTime.now();
+      widget.job.status = JobStatus.traveling;
+      _updateJobStatus(JobStatus.traveling);
+      _sendStartTravel();
+    }
 
     customerLocation = _safeParseLatLng(widget.job.mapUrl ?? "");
 
@@ -103,7 +107,7 @@ class _MapScreenState extends State<MapScreen> {
       widget.job.arrivedAt = DateTime.now();
     });
 
-    context.read<JobProvider>().updateJob(
+    context.read<JobProvider>().updateJobStatus(
       widget.job..status = JobStatus.working,
     );
 
@@ -129,15 +133,17 @@ class _MapScreenState extends State<MapScreen> {
     debugPrint("Finish sent ${widget.job.id}");
   }
 
-  Future<void> _updateJobStatus(String status) async {
+  Future<void> _updateJobStatus(JobStatus status) async {
     try {
       await FirebaseFirestore.instance
           .collection('jobs')
           .doc(widget.job.id)
           .update({
-            "status": status,
+            ...JobProvider.statusChangeFields(
+              status,
+              by: widget.job.technicianId,
+            ),
             "assignedTo": widget.job.technicianId,
-            "updatedAt": FieldValue.serverTimestamp(),
           });
     } catch (e) {
       debugPrint("Update status error: $e");

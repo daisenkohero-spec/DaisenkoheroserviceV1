@@ -14,7 +14,7 @@ class JobProvider extends ChangeNotifier {
   bool isOverdue(Job job) {
     final now = DateTime.now();
 
-    return job.status != JobStatus.completed && job.endTime.isBefore(now);
+    return !job.isDone && job.endTime.isBefore(now);
   }
 
   double get todayProgress {
@@ -29,7 +29,7 @@ class JobProvider extends ChangeNotifier {
     if (todayJobs.isEmpty) return 0.0;
 
     final completed = todayJobs
-        .where((j) => j.status == JobStatus.completed)
+        .where((j) => j.isDone)
         .length;
 
     return completed / todayJobs.length;
@@ -52,11 +52,15 @@ class JobProvider extends ChangeNotifier {
         .where("technicianId", isEqualTo: technicianId)
         .snapshots()
         .listen((snapshot) {
-          final newJobs = snapshot.docs.map<Job>((doc) {
-            final data = doc.data() as Map<String, dynamic>;
+          final newJobs = snapshot.docs
+              .map<Job>((doc) {
+                final data = doc.data() as Map<String, dynamic>;
 
-            return Job.fromFirestore(data, doc.id);
-          }).toList();
+                return Job.fromFirestore(data, doc.id);
+              })
+              // งานที่ยกเลิก/หมดอายุ หรือยังไม่ได้มอบหมาย ไม่แสดงในแอปช่าง
+              .where((job) => job.status.visibleToTechnician)
+              .toList();
 
           // notification
           for (var job in newJobs) {
@@ -101,7 +105,7 @@ class JobProvider extends ChangeNotifier {
 
   List<Job> get allActiveJobs {
     return _jobs.where((job) {
-      return job.status != JobStatus.completed;
+      return !job.isDone;
     }).toList();
   }
 
@@ -174,7 +178,7 @@ class JobProvider extends ChangeNotifier {
   List<Job> get todayUpcomingJobs {
     final now = DateTime.now();
     return todayJobs.where((job) {
-      return job.startTime.isAfter(now) && job.status != JobStatus.completed;
+      return job.startTime.isAfter(now) && !job.isDone;
     }).toList();
   }
 
@@ -188,7 +192,7 @@ class JobProvider extends ChangeNotifier {
   List<Job> get todayOverdueJobs {
     final now = DateTime.now();
     return todayJobs.where((job) {
-      return job.endTime.isBefore(now) && job.status != JobStatus.completed;
+      return job.endTime.isBefore(now) && !job.isDone;
     }).toList();
   }
 
@@ -225,17 +229,14 @@ class JobProvider extends ChangeNotifier {
   /// ===============================
   List<Job> get upcomingJobs {
     return _jobs.where((job) {
-      return job.status == JobStatus.pending ||
-          job.status == JobStatus.assigned;
+      return job.status == JobStatus.assigned;
     }).toList();
   }
 
   bool isUpcoming(Job job) {
     final now = DateTime.now();
 
-    return (job.status == JobStatus.pending ||
-            job.status == JobStatus.assigned) &&
-        job.startTime.isAfter(now);
+    return job.status == JobStatus.assigned && job.startTime.isAfter(now);
   }
 
   /// ===============================
@@ -250,7 +251,7 @@ class JobProvider extends ChangeNotifier {
     final now = DateTime.now();
 
     return _jobs.where((job) {
-      return job.status != JobStatus.completed && job.endTime.isBefore(now);
+      return !job.isDone && job.endTime.isBefore(now);
     }).toList();
   }
 
@@ -269,7 +270,7 @@ class JobProvider extends ChangeNotifier {
       notifyListeners();
 
       await FirebaseFirestore.instance.collection("jobs").doc(jobId).update({
-        "status": "working",
+        ...statusChangeFields(JobStatus.working, by: job.technicianId),
         "isNotificationRead": true,
         "startedWorkingAt": FieldValue.serverTimestamp(),
       });
@@ -303,7 +304,7 @@ class JobProvider extends ChangeNotifier {
       notifyListeners();
 
       await FirebaseFirestore.instance.collection("jobs").doc(jobId).update({
-        "status": "completed",
+        ...statusChangeFields(JobStatus.completed, by: job.technicianId),
         "finishedAt": FieldValue.serverTimestamp(),
 
         "notificationType": "jobUpdate",
@@ -330,6 +331,34 @@ class JobProvider extends ChangeNotifier {
   /// ===============================
   /// Update job
   /// ===============================
+  /// ฟิลด์สำหรับเปลี่ยนสถานะงาน: เขียน `status` และต่อท้าย `timeline`
+  /// ทุกการเปลี่ยนสถานะต้องผ่านตรงนี้ เพื่อให้ประวัติของงานครบ
+  /// (ใช้เวลาเครื่อง เพราะ serverTimestamp ใส่ใน array ไม่ได้)
+  static Map<String, dynamic> statusChangeFields(
+    JobStatus status, {
+    required String by,
+  }) {
+    return {
+      "status": status.wire,
+      "updatedAt": FieldValue.serverTimestamp(),
+      "timeline": FieldValue.arrayUnion([
+        {"status": status.wire, "at": Timestamp.now(), "by": by},
+      ]),
+    };
+  }
+
+  /// เปลี่ยนสถานะงาน พร้อมบันทึกฟิลด์อื่นของงานจากโมเดล (เช่น arrivedAt, รูป)
+  Future<void> updateJobStatus(Job job) async {
+    try {
+      await FirebaseFirestore.instance.collection("jobs").doc(job.id).update({
+        ...job.toMap(),
+        ...statusChangeFields(job.status, by: job.technicianId),
+      });
+    } catch (e) {
+      debugPrint("updateJobStatus error: $e");
+    }
+  }
+
   Future<void> updateJob(Job updatedJob) async {
     try {
       await FirebaseFirestore.instance
@@ -363,7 +392,7 @@ class JobProvider extends ChangeNotifier {
   String getJobCategory(Job job) {
     final now = DateTime.now();
 
-    if (job.status == JobStatus.completed) {
+    if (job.isDone) {
       return "completed";
     }
 
@@ -379,7 +408,7 @@ class JobProvider extends ChangeNotifier {
   Color getJobBorderColor(Job job) {
     final now = DateTime.now();
 
-    if (job.status == JobStatus.completed) {
+    if (job.isDone) {
       return Colors.grey;
     }
 
