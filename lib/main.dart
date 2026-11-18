@@ -1,3 +1,4 @@
+import 'core/update/update_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:project_techniqian/screens/login_screen.dart';
 import 'package:provider/provider.dart';
@@ -84,6 +85,10 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
 
       theme: ThemeData(primaryColor: Color(0xFF1E3A8A)),
+
+      // เว็บ: แสดงแถบ "มีเวอร์ชันใหม่" เมื่อมีการ deploy ใหม่
+      builder: (context, child) =>
+          UpdateBanner(child: child ?? const SizedBox.shrink()),
 
       home: const AuthWrapper(),
     );
