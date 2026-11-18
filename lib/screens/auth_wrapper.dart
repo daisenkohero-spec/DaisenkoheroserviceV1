@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'login_screen.dart';
-import 'home_screen.dart';
 import 'nav_screen.dart';
+import 'dispatcher/dispatcher_screen.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -24,7 +24,8 @@ Widget build(BuildContext context) {
   final auth = context.watch<AuthProvider>();
 
   if (auth.user != null) {
-    return const NavScreen();
+    // ผู้ดูแล -> หน้า Dispatcher, ช่าง -> แอปช่างเดิม
+    return auth.isAdmin ? const DispatcherScreen() : const NavScreen();
   } else {
     return const LoginScreen();
   }

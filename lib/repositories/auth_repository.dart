@@ -82,6 +82,9 @@ class AuthRepository {
       rethrow;
     }
 
+    // ผู้ดูแลที่ใช้ Google (เช่นอีเมลร้าน) เข้าหน้า Dispatcher ได้เลย
+    if (await currentUserIsAdmin()) return adminUser();
+
     final technician = await _fetchTechnician(
       uid: cred.user!.uid,
       // Google ที่ยังไม่ได้เชื่อม จะได้บัญชีใหม่เปล่า ๆ ลบทิ้งเพื่อไม่ให้ค้าง
@@ -161,5 +164,55 @@ class AuthRepository {
       name: data['name'],
       token: _auth.currentUser?.uid ?? '',
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // ผู้ดูแล (Dispatcher)
+  // สิทธิ์ผู้ดูแลมาจาก custom claim `role: admin` ที่ตั้งด้วย scripts/set-role.js
+  // (ไม่ใช้ collection `admins` แล้ว) Security Rules อ่านค่าเดียวกันนี้
+  // ---------------------------------------------------------------------------
+
+  /// ผู้ใช้ที่ล็อกอินอยู่เป็นผู้ดูแลหรือไม่ (บังคับรีเฟรช token เพื่อให้เห็นสิทธิ์ล่าสุด)
+  Future<bool> currentUserIsAdmin() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    final token = await user.getIdTokenResult(true);
+    return token.claims?['role'] == 'admin';
+  }
+
+  /// ข้อมูลผู้ดูแลที่ล็อกอินอยู่ (ไม่มีเอกสารช่าง)
+  UserModel adminUser() {
+    final user = _auth.currentUser!;
+    final name = (user.displayName?.isNotEmpty ?? false)
+        ? user.displayName!
+        : (user.email ?? 'Admin');
+    return UserModel(id: user.uid, name: name, token: user.uid);
+  }
+
+  /// เข้าสู่ระบบผู้ดูแลด้วยอีเมลจริง
+  Future<UserModel> loginAdmin({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        throw Exception('PASSWORD_WRONG');
+      }
+      if (e.code == 'user-not-found') {
+        throw Exception('USER_NOT_FOUND');
+      }
+      rethrow;
+    }
+
+    if (!await currentUserIsAdmin()) {
+      await _auth.signOut();
+      throw Exception('NOT_ADMIN');
+    }
+    return adminUser();
   }
 }

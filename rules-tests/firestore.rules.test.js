@@ -143,6 +143,11 @@ test("admin manages technician profiles", async () => {
   await assertSucceeds(updateDoc(doc(asAdmin(), "technicians/techB"), { radiusKm: 20 }));
 });
 
+test("admin logs own login event but not as a technician", async () => {
+  await assertSucceeds(addDoc(collection(asAdmin(), "activity_events"), { technicianId: "uidAdmin", type: "login" }));
+  await assertFails(addDoc(collection(asAdmin(), "activity_events"), { technicianId: "techA", type: "login" }));
+});
+
 test("admin cannot edit or delete the activity log", async () => {
   await assertFails(updateDoc(doc(asAdmin(), "activity_events/evB"), { type: "x" }));
   await assertFails(deleteDoc(doc(asAdmin(), "activity_events/evB")));

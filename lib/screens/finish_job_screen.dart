@@ -205,7 +205,7 @@ class _FinishJobScreenState extends State<FinishJobScreen> {
               ),
               const Spacer(),
               const Text(
-                "Finish Job",
+                "จบงาน",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,

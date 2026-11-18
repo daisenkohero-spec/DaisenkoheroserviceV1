@@ -13,21 +13,19 @@ import 'package:permission_handler/permission_handler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  await NotificationService.init();
-  await setupFCM();
 
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    final title = message.notification?.title ?? "";
-    final body = message.notification?.body ?? "";
+  // Firebase core is required — but never let a failure hang the whole app.
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint("Firebase init error: $e");
+  }
 
-    // ใช้ local notification แสดง
-    NotificationService.showNotification(title, body);
-  });
-
+  // Render the app immediately. Notifications/messaging are set up afterwards
+  // and are fully optional — on iOS Safari web push can throw or hang, and it
+  // must NEVER block the app from showing (that caused the infinite spinner).
   runApp(
     MultiProvider(
       providers: [
@@ -38,6 +36,27 @@ void main() async {
       child: const MyApp(),
     ),
   );
+
+  // Fire-and-forget, fully guarded — cannot affect rendering.
+  _initMessaging();
+}
+
+/// Optional notifications / Firebase Messaging setup. Guarded so any failure
+/// (common on web / iOS Safari) is logged and ignored.
+Future<void> _initMessaging() async {
+  try {
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    await NotificationService.init();
+    await setupFCM();
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final title = message.notification?.title ?? "";
+      final body = message.notification?.body ?? "";
+      NotificationService.showNotification(title, body);
+    });
+  } catch (e) {
+    debugPrint("Messaging/notifications init skipped: $e");
+  }
 }
 
 /// BACKGROUND HANDLER
