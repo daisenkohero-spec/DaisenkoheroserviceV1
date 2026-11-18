@@ -60,7 +60,9 @@ service cloud.firestore {
     match /activity_events/{eventId} {
       // Append-only usage log: a technician may only add and read events about
       // themselves; admins read all (reporting). Nobody edits or deletes.
-      allow create: if ownsTechnician(request.resource.data.technicianId);
+      // Admins log their own dispatcher logins under their uid.
+      allow create: if ownsTechnician(request.resource.data.technicianId)
+        || (isAdmin() && request.resource.data.technicianId == request.auth.uid);
       allow read: if isAdmin() || ownsTechnician(resource.data.technicianId);
       allow update, delete: if false;
     }

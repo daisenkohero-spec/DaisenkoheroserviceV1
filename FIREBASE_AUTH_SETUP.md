@@ -86,6 +86,18 @@ node set-role.js owner@example.com admin                        # existing login
 node set-role.js office@example.com none                        # remove admin
 ```
 
+Admins sign in to the app with their **email** (technicians use their phone
+number) and land on the dispatcher. To create one in one step with a display
+name: `node add-admin.js "<name>" <email> <password>`.
+
+Admins created with the July dispatcher build were stored in an `admins`
+collection, which the rules no longer read. Move them to the claim once:
+
+```powershell
+node migrate-admins.js            # dry run
+node migrate-admins.js --apply
+```
+
 A role change takes effect after the person signs out and back in. An admin
 without a technician profile who opens the technician app sees
 "บัญชีนี้เป็นบัญชีแอดมิน กรุณาใช้หน้าหลังบ้าน".

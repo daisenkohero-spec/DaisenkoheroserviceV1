@@ -14,6 +14,7 @@ class AuthProvider extends ChangeNotifier {
 
   UserModel? _currentUser;
   bool _isLoading = false;
+  bool _isAdmin = false;
   String? _error;
 
   // -------------------
@@ -22,6 +23,9 @@ class AuthProvider extends ChangeNotifier {
 
   UserModel? get user => _currentUser;
   bool get isLoggedIn => _currentUser != null;
+
+  /// ผู้ดูแล (role claim = admin) -> หน้า Dispatcher
+  bool get isAdmin => _isAdmin;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -44,8 +48,13 @@ class AuthProvider extends ChangeNotifier {
     _api.setToken(firebaseUser.uid);
 
     try {
-      final user = await _repository.getProfile(userId);
-      _currentUser = user;
+      if (await _repository.currentUserIsAdmin()) {
+        _currentUser = _repository.adminUser();
+        _isAdmin = true;
+      } else {
+        _currentUser = await _repository.getProfile(userId);
+        _isAdmin = false;
+      }
     } catch (e) {
       await prefs.clear();
     }
@@ -57,8 +66,12 @@ class AuthProvider extends ChangeNotifier {
   // LOGIN
   // -------------------
 
-  Future<void> login(String username, String password) =>
-      _runLogin(() => _repository.login(phone: username, password: password));
+  /// ใส่อีเมล = ผู้ดูแล, ใส่เบอร์โทร = ช่าง
+  Future<void> login(String username, String password) => _runLogin(
+    () => username.contains('@')
+        ? _repository.loginAdmin(email: username, password: password)
+        : _repository.login(phone: username, password: password),
+  );
 
   /// เข้าสู่ระบบด้วย Google (ต้องเชื่อมบัญชีไว้ก่อน)
   Future<void> loginWithGoogle() => _runLogin(_repository.loginWithGoogle);
@@ -99,8 +112,26 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final user = await signIn();
+      final prefs = await SharedPreferences.getInstance();
+
+      if (await _repository.currentUserIsAdmin()) {
+        // ผู้ดูแล: ไม่มีเอกสารช่าง จึงไม่อัปเดต technicians
+        _currentUser = user;
+        _isAdmin = true;
+        await prefs.setString("userId", user.id);
+        _api.setToken(user.token);
+        await ActivityService.log(
+          type: ActivityService.login,
+          technicianId: user.id,
+          meta: {"role": "admin"},
+        );
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
 
       _currentUser = user;
+      _isAdmin = false;
 
       // ผูก FCM token กับช่างจริงที่ล็อกอิน (แทนการ hardcode ตอนเริ่มแอป)
       String? fcmToken;
@@ -118,7 +149,6 @@ class AuthProvider extends ChangeNotifier {
             'lastLogin': FieldValue.serverTimestamp(),
             if (fcmToken != null) 'fcmToken': fcmToken,
           });
-      final prefs = await SharedPreferences.getInstance();
       await prefs.setString("userId", user.id);
       _api.setToken(user.token);
 
@@ -130,13 +160,16 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("LOGIN ERROR: $e");
       _currentUser = null;
+      _isAdmin = false;
       final msg = e.toString();
       if (msg.contains("CANCELLED")) {
         _error = null; // ผู้ใช้ปิดหน้าต่าง Google เอง ไม่ต้องแจ้ง
       } else if (msg.contains("PASSWORD_WRONG")) {
         _error = "รหัสผ่านไม่ถูกต้อง";
+      } else if (msg.contains("NOT_ADMIN")) {
+        _error = "บัญชีนี้ไม่มีสิทธิ์ผู้ดูแล";
       } else if (msg.contains("ADMIN_ACCOUNT")) {
-        _error = "บัญชีนี้เป็นบัญชีแอดมิน กรุณาใช้หน้าหลังบ้าน";
+        _error = "บัญชีนี้เป็นบัญชีผู้ดูแล กรุณาเข้าสู่ระบบด้วยอีเมล";
       } else if (msg.contains("GOOGLE_NOT_LINKED")) {
         _error =
             "บัญชี Google นี้ยังไม่ได้เชื่อมกับช่าง กรุณาเข้าสู่ระบบด้วยเบอร์โทรก่อน แล้วกดเชื่อมบัญชี Google";
@@ -164,7 +197,7 @@ class AuthProvider extends ChangeNotifier {
 
     _error = null;
 
-    if (userId != null) {
+    if (userId != null && !_isAdmin) {
       await FirebaseFirestore.instance
           .collection('technicians')
           .doc(userId)
@@ -188,6 +221,7 @@ class AuthProvider extends ChangeNotifier {
     await prefs.clear();
 
     _currentUser = null;
+    _isAdmin = false;
 
     notifyListeners();
   }
