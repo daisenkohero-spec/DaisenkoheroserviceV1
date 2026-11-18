@@ -1,8 +1,13 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
-  static const String baseUrl = "http://your-backend-url.com/api";
+  static const String _productionBaseUrl = "https://api.daisenkohero.com/api";
+  static const String _localBaseUrl = "http://localhost:3000/api";
+
+  static String get baseUrl =>
+      kDebugMode ? _localBaseUrl : _productionBaseUrl;
 
   String? _token;
 

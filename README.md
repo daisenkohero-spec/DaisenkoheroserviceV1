@@ -85,6 +85,17 @@ lib/
 
 ## ⚙️ How to Run
 
+### Web
+
+```powershell
+.\scripts\start-web.ps1
+```
+
+Open [http://localhost:8080](http://localhost:8080). Firebase setup and technician
+onboarding: see [FIREBASE_AUTH_SETUP.md](FIREBASE_AUTH_SETUP.md).
+
+### Mobile / desktop
+
 ```bash
 flutter pub get
 flutter run

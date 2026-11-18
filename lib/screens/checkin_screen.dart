@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../providers/attendance_provider.dart';
+import '../providers/auth_provider.dart';
 import 'dart:async';
 import '../widgets/app_alert.dart';
 
@@ -52,6 +53,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
   void _submit() async {
     try {
       final attendance = context.read<AttendanceProvider>();
+      final auth = context.read<AuthProvider>();
 
       if (!isSameDay(_selectedDay, DateTime.now())) {
         AppAlert.showMessage(
@@ -176,8 +178,13 @@ class _CheckinScreenState extends State<CheckinScreen> {
       }
 
       /// ================= บันทึกเช็คอิน =================
-      attendance.checkIn(type: _type, reason: _reasonController.text);
+      await attendance.checkIn(
+        type: _type,
+        reason: _reasonController.text,
+        technicianId: auth.user?.id,
+      );
 
+      if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
       AppAlert.showMessage(

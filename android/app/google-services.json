@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "408424583515",
-    "project_id": "air-cleaning-test",
-    "storage_bucket": "air-cleaning-test.firebasestorage.app"
+    "project_number": "519440484589",
+    "project_id": "daisenkoheroservicev1",
+    "storage_bucket": "daisenkoheroservicev1.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:408424583515:android:d8cf3e093270ff7e390a7e",
+        "mobilesdk_app_id": "1:519440484589:android:403384608f2306f5a724e4",
         "android_client_info": {
           "package_name": "com.example.project_techniqian"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAu5ZnM0JpsF-HoaQHFHriHZkTp_Gv1lHY"
+          "current_key": "AIzaSyC05cIeLYivRFVtkl9OvclUDTXW4qUJjfg"
         }
       ],
       "services": {
