@@ -21,10 +21,9 @@ terminal commands.
 ## In scope (v1)
 
 ### A. Admin access
-- Admin login (Firebase Auth). At login the app checks whether the user is an admin
-  (an `admins` collection) and shows the dispatcher instead of the technician view.
-- An `add-admin` script (Admin SDK) to create admin accounts, mirroring
-  `add-technician.js`.
+- Admin login (Firebase Auth). At login the app checks the user's `role` custom
+  claim and shows the dispatcher instead of the technician view.
+- `scripts/set-role.js` (Admin SDK) creates admin accounts and sets roles.
 
 ### B. Job assignment
 - Form to create a job: customer, service, date/time, address, **pick a technician**
@@ -59,7 +58,7 @@ terminal commands.
 - **Same app, role-based:** at login, route admins to the dispatcher screens and
   technicians to the current app. One codebase, one deployment.
 - **New pieces required:**
-  - `admins/{uid}` collection to mark admin users.
+  - `role` custom claim (`admin` / `technician`) to mark admin users — done.
   - Security-rules update so admins can create/assign jobs and read all
     technicians / jobs / activity_events (technicians stay scoped to their own data).
   - Firestore composite indexes for the reporting queries (e.g. `jobs` by
@@ -67,7 +66,7 @@ terminal commands.
   - A charting approach for the dashboard.
 
 ## Proposed build phases
-0. **Foundations** — admins collection + `add-admin` script, security-rules update,
+0. **Foundations** — role claim + `set-role` script, security-rules update (done),
    role-based routing at login.
 1. **Job assignment** — create/assign form + today's board.
 2. **Technician management** — list + onboard form + status.

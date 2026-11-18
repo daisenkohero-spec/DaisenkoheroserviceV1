@@ -58,6 +58,9 @@ async function main() {
     throw e;
   }
 
+  // Mark the login as a technician (custom claim read by the app and rules).
+  await auth.setCustomUserClaims(userRecord.uid, { role: "technician" });
+
   // 2) Create the technician profile, pre-linked to the Auth uid.
   const ref = await db.collection("technicians").add({
     name,

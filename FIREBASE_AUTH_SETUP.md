@@ -71,13 +71,33 @@ firebase deploy --only firestore:rules,storage
 `firebase deploy --only storage` also requires that a **Storage bucket** exists:
 Console → **Storage** → **Get started** (if you haven't already).
 
+## 4b. Roles: admins and technicians
+
+Each login carries a `role` custom claim: `technician` or `admin`. Only the
+Admin SDK can set it, so a self-created account can't promote itself.
+
+- `add-technician.js` and `migrate-auth.js --apply` give technicians their role.
+- Office staff (real email addresses):
+
+```powershell
+cd scripts
+node set-role.js office@example.com admin --create <password>   # new admin
+node set-role.js owner@example.com admin                        # existing login
+node set-role.js office@example.com none                        # remove admin
+```
+
+A role change takes effect after the person signs out and back in. An admin
+without a technician profile who opens the technician app sees
+"บัญชีนี้เป็นบัญชีแอดมิน กรุณาใช้หน้าหลังบ้าน".
+
 ## 5. What the rules enforce
 
 - **technicians** — a tech can read and update only their own doc (matched by
-  `authUid`) and cannot change `authUid` or `phone`; create/delete are Admin SDK only.
+  `authUid`) and cannot change `authUid` or `phone`. Admins read and manage all.
 - **jobs** — a tech can read/update only jobs whose `technicianId` belongs to
-  them and cannot reassign a job; create/delete are Admin SDK only.
-- **activity_events** — append-only: a tech can add and read only their own events.
+  them and cannot reassign a job. Admins create, assign, edit and delete any job.
+- **activity_events** — append-only: a tech can add and read only their own
+  events; admins read all. Nobody edits or deletes.
 - **everything else** — denied.
 - **storage `job_photos/`** — signed-in techs can read; uploads must be an
   image under 10 MB.
@@ -100,6 +120,5 @@ npm test
 - Storage `job_photos/` still lets any signed-in user upload to any job's
   folder; restrict it to the job's technician when the booking system lands.
 - Firebase Storage and Cloud Functions need the **Blaze** plan.
-- If you later add an admin web dashboard, give admins a custom claim
-  (`role: admin`) and grant access in these rules; server-side code using the
-  Firebase **Admin SDK** bypasses rules by design.
+- Server-side code using the Firebase **Admin SDK** (scripts, Cloud Functions)
+  bypasses these rules by design.
