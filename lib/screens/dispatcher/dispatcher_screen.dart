@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import 'assign_job_screen.dart';
 import 'reporting_screen.dart';
 import 'applications_screen.dart';
+import 'technicians_screen.dart';
 
 /// Admin dispatcher home — today's job board across the whole team.
 class DispatcherScreen extends StatelessWidget {
@@ -54,6 +55,14 @@ class DispatcherScreen extends StatelessWidget {
                 ),
               );
             },
+          ),
+          IconButton(
+            tooltip: "จัดการช่าง",
+            icon: const Icon(Icons.engineering_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TechniciansScreen()),
+            ),
           ),
           IconButton(
             tooltip: "รายงานสรุป",

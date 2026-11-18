@@ -178,6 +178,42 @@ test("rejected applicant may resubmit as pending", async () => {
   await assertSucceeds(updateDoc(doc(asNoRole("newbie"), "applications/newbie"), { status: "pending", trainingLevelClaimed: 1 }));
 });
 
+// --- technician profile (ticket #4) ----------------------------------------
+
+test("technician sets own base point and radius", async () => {
+  await assertSucceeds(updateDoc(doc(as("uidA"), "technicians/techA"), {
+    base: { lat: 13.75, lng: 100.5, geohash: "w4rqq" }, radiusKm: 20,
+  }));
+});
+
+test("technician cannot change own certificate, type or active flag", async () => {
+  await assertFails(updateDoc(doc(as("uidA"), "technicians/techA"), { cert: { level: 3 } }));
+  await assertFails(updateDoc(doc(as("uidA"), "technicians/techA"), { employmentType: "inhouse" }));
+  await assertFails(updateDoc(doc(as("uidA"), "technicians/techA"), { active: true }));
+});
+
+test("admin records certificate and disables a technician", async () => {
+  await assertSucceeds(updateDoc(doc(asAdmin(), "technicians/techA"), {
+    cert: { level: 2, certifiedAt: Timestamp.now(), expiresAt: Timestamp.now(), recordedBy: "uidAdmin" },
+  }));
+  await assertSucceeds(updateDoc(doc(asAdmin(), "technicians/techA"), { active: false }));
+  // disabled: no more job access or logging
+  await assertFails(getDoc(doc(as("uidA"), "jobs/jobA")));
+  await assertFails(addDoc(collection(as("uidA"), "activity_events"), { technicianId: "techA", type: "login" }));
+  // still sees own profile (so the app can explain why)
+  await assertSucceeds(getDoc(doc(as("uidA"), "technicians/techA")));
+});
+
+test("config/booking: signed-in read, admin write", async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), "config/booking"), { defaultRadiusKm: 15 });
+  });
+  await assertSucceeds(getDoc(doc(as("uidA"), "config/booking")));
+  await assertFails(setDoc(doc(as("uidA"), "config/booking"), { defaultRadiusKm: 99 }));
+  await assertSucceeds(setDoc(doc(asAdmin(), "config/booking"), { defaultRadiusKm: 20 }));
+  await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), "config/booking")));
+});
+
 // --- activity_events -----------------------------------------------------
 
 test("technician logs an event about themselves", async () => {

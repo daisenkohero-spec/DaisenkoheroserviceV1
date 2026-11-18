@@ -201,6 +201,8 @@ class AuthProvider extends ChangeNotifier {
         _error = null;
       } else if (msg.contains("CANCELLED")) {
         _error = null; // ผู้ใช้ปิดหน้าต่าง Google เอง ไม่ต้องแจ้ง
+      } else if (msg.contains("DISABLED")) {
+        _error = "บัญชีนี้ถูกปิดใช้งาน กรุณาติดต่อแอดมิน";
       } else if (msg.contains("PASSWORD_WRONG")) {
         _error = "รหัสผ่านไม่ถูกต้อง";
       } else if (msg.contains("NOT_ADMIN")) {

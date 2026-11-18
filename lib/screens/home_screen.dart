@@ -7,6 +7,7 @@ import '../models/job_model.dart';
 import 'checkin_screen.dart';
 import 'notification_screen.dart';
 import '../screens/login_screen.dart';
+import 'service_area_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -202,6 +203,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () async {
                             final choice = await _showAccountSheet(context);
                             if (!context.mounted) return;
+                            if (choice == _AccountAction.serviceArea) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ServiceAreaScreen(),
+                                ),
+                              );
+                              return;
+                            }
                             if (choice == _AccountAction.linkGoogle) {
                               await _linkGoogle(context);
                               return;
@@ -1086,7 +1096,7 @@ Widget _statusBox({
 // เมนูบัญชี (แตะที่ชื่อผู้ใช้): เชื่อมบัญชี Google / ออกจากระบบ
 // -----------------------------------------------------------------------------
 
-enum _AccountAction { linkGoogle, logout }
+enum _AccountAction { serviceArea, linkGoogle, logout }
 
 Future<_AccountAction?> _showAccountSheet(BuildContext context) {
   final googleEmail = context.read<AuthProvider>().linkedGoogleEmail;
@@ -1103,6 +1113,13 @@ Future<_AccountAction?> _showAccountSheet(BuildContext context) {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: const Icon(Icons.place_outlined),
+              title: const Text("พื้นที่รับงาน & ใบรับรอง"),
+              subtitle: const Text("ตั้งจุดฐาน รัศมีรับงาน และดูระดับ Daisenko"),
+              onTap: () =>
+                  Navigator.pop(sheetContext, _AccountAction.serviceArea),
+            ),
             ListTile(
               leading: Icon(
                 linked ? Icons.check_circle : Icons.link_rounded,
