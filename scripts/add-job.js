@@ -73,7 +73,6 @@ async function main() {
   const job = {
     technicianId,
     customer,
-    phone: phone || "",
     service,
     serviceType: service,
     place: place || "",
@@ -94,6 +93,9 @@ async function main() {
   };
 
   const ref = await db.collection("jobs").add(job);
+  // Customer phone lives in a private sub-document that technicians can read
+  // only around the job (see firestore.rules: contactWindowOpen).
+  if (phone) await ref.collection("private").doc("contact").set({ phone: String(phone).trim() });
   console.log(`✓ Job created: ${ref.id}`);
   console.log(
     `  ${customer} — ${service}  |  ${dateStr} ${startStr}-${endStr}  |  tech ${job.technicianId}`

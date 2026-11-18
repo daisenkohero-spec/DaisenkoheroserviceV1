@@ -67,10 +67,12 @@ class _AssignJobScreenState extends State<AssignJobScreen> {
       final dateStr =
           "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
-      await FirebaseFirestore.instance.collection('jobs').add({
+      // เบอร์ลูกค้าเก็บแยกใน private/contact เพื่อเปิดให้ช่างเห็นเฉพาะช่วงงาน
+      final jobRef = FirebaseFirestore.instance.collection('jobs').doc();
+      final batch = FirebaseFirestore.instance.batch();
+      batch.set(jobRef, {
         'technicianId': _technicianId,
         'customer': _customer.text.trim(),
-        'phone': _phone.text.trim(),
         'service': _service.text.trim(),
         'serviceType': _service.text.trim(),
         'place': _place.text.trim(),
@@ -95,6 +97,11 @@ class _AssignJobScreenState extends State<AssignJobScreen> {
         'priority': 'normal',
         'isNotificationRead': false,
       });
+      final phone = _phone.text.trim();
+      if (phone.isNotEmpty) {
+        batch.set(jobRef.collection('private').doc('contact'), {'phone': phone});
+      }
+      await batch.commit();
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
